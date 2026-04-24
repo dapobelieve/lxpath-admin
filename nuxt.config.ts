@@ -10,7 +10,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:8030',
+      apiBase: process.env.API_BASE || 'https://api.lxpath.com',
     },
   },
 
