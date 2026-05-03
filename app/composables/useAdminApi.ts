@@ -1,4 +1,4 @@
-import type { ValidationStats, PaginatedPaths, PathDetail, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo } from '~/types';
+import type { ValidationStats, PaginatedPaths, PathDetail, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -10,6 +10,15 @@ interface ApiResponse<T> {
 interface PaginatedResponse {
   data: ValidationPathSummary[];
   pageInfo: PageInfo;
+  status: string;
+  message: string;
+  code: number;
+}
+
+interface PaginatedCoursesResponse {
+  data: CourseSummary[];
+  pageInfo: PageInfo;
+  filters: CourseFilters;
   status: string;
   message: string;
   code: number;
@@ -85,11 +94,45 @@ export function useAdminApi() {
     }
   }
 
+  async function getCourses(params: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    provider?: string;
+    level?: string;
+    category?: string;
+    isVerified?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  } = {}): Promise<PaginatedCourses> {
+    const query: Record<string, string> = {};
+    if (params.page) query.page = String(params.page);
+    if (params.limit) query.limit = String(params.limit);
+    if (params.q) query.q = params.q;
+    if (params.provider) query.provider = params.provider;
+    if (params.level) query.level = params.level;
+    if (params.category) query.category = params.category;
+    if (params.isVerified !== undefined) query.isVerified = String(params.isVerified);
+    if (params.sortBy) query.sortBy = params.sortBy;
+    if (params.sortOrder) query.sortOrder = params.sortOrder;
+
+    const response = await $fetch<PaginatedCoursesResponse>(
+      `${baseUrl}/api/admin/courses`,
+      { params: query },
+    );
+    return {
+      data: response.data,
+      pageInfo: response.pageInfo,
+      filters: response.filters,
+    };
+  }
+
   return {
     getValidationStats,
     getValidationPaths,
     getValidationPathDetail,
     getRecentUsers,
     getUserDetail,
+    getCourses,
   };
 }

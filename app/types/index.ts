@@ -140,3 +140,37 @@ export interface UserDetailData {
   pathCount: number;
   paths: ValidationPathSummary[];
 }
+
+export interface CourseSummary {
+  _id: string;
+  title: string;
+  description?: string;
+  duration?: string;
+  cost?: string;
+  link: string;
+  provider?: string;
+  providerId?: string;
+  rating?: number;
+  skillsLearned?: string[];
+  level?: string;
+  category?: string;
+  institution?: string;
+  reviewCount?: number;
+  isVerified?: boolean;
+  language?: string;
+  priorityScore?: number;
+  priorityTier?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CourseFilters {
+  providers: string[];
+  levels: string[];
+}
+
+export interface PaginatedCourses {
+  data: CourseSummary[];
+  pageInfo: PageInfo;
+  filters: CourseFilters;
+}
