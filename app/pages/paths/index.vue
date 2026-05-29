@@ -97,19 +97,11 @@
           </table>
         </div>
 
-        <div v-if="data.pageInfo.totalPages > 1" class="flex justify-center">
-          <div class="join">
-            <button
-              v-for="p in data.pageInfo.totalPages"
-              :key="p"
-              class="join-item btn btn-sm"
-              :class="{ 'btn-active': p === currentPage }"
-              @click="goToPage(p)"
-            >
-              {{ p }}
-            </button>
-          </div>
-        </div>
+        <LayoutPagination
+          :current-page="currentPage"
+          :total-pages="data.pageInfo.totalPages"
+          @update:page="goToPage"
+        />
       </template>
 
       <div v-else-if="error" class="alert alert-error">

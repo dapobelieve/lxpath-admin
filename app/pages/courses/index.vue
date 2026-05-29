@@ -114,37 +114,11 @@
           </table>
         </div>
 
-        <div v-if="data.pageInfo.totalPages > 1" class="flex justify-center">
-          <div class="join">
-            <button
-              class="join-item btn btn-sm"
-              :disabled="currentPage === 1"
-              @click="goToPage(1)"
-            >&laquo;</button>
-            <button
-              class="join-item btn btn-sm"
-              :disabled="currentPage === 1"
-              @click="goToPage(currentPage - 1)"
-            >&lsaquo;</button>
-            <button
-              v-for="p in visiblePages"
-              :key="p"
-              class="join-item btn btn-sm"
-              :class="{ 'btn-active': p === currentPage }"
-              @click="goToPage(p)"
-            >{{ p }}</button>
-            <button
-              class="join-item btn btn-sm"
-              :disabled="currentPage === data.pageInfo.totalPages"
-              @click="goToPage(currentPage + 1)"
-            >&rsaquo;</button>
-            <button
-              class="join-item btn btn-sm"
-              :disabled="currentPage === data.pageInfo.totalPages"
-              @click="goToPage(data.pageInfo.totalPages)"
-            >&raquo;</button>
-          </div>
-        </div>
+        <LayoutPagination
+          :current-page="currentPage"
+          :total-pages="data.pageInfo.totalPages"
+          @update:page="goToPage"
+        />
       </template>
 
       <div v-else-if="error" class="alert alert-error">
@@ -200,18 +174,6 @@ const rangeStart = computed(() => {
 const rangeEnd = computed(() => {
   if (!data.value) return 0;
   return Math.min(currentPage.value * pageSize.value, data.value.pageInfo.total);
-});
-
-const visiblePages = computed(() => {
-  if (!data.value) return [] as number[];
-  const total = data.value.pageInfo.totalPages;
-  const current = currentPage.value;
-  const window = 2;
-  const start = Math.max(1, current - window);
-  const end = Math.min(total, current + window);
-  const pages: number[] = [];
-  for (let i = start; i <= end; i++) pages.push(i);
-  return pages;
 });
 
 function applyFilters() {
