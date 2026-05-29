@@ -185,8 +185,8 @@ const { data, pending, error, refresh } = useAsyncData(
   { default: () => null, watch: [currentPage, sortBy, sortOrder] },
 );
 
-const providers = computed(() => data.value?.filters.providers ?? []);
-const levels = computed(() => data.value?.filters.levels ?? []);
+const providers = computed(() => data.value?.filters?.providers ?? []);
+const levels = computed(() => data.value?.filters?.levels ?? []);
 
 const hasActiveFilters = computed(() =>
   Boolean(searchQuery.value || providerFilter.value || levelFilter.value || verifiedFilter.value),
