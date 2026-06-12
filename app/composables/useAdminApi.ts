@@ -1,4 +1,4 @@
-import type { ValidationStats, PaginatedPaths, PathDetail, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters } from '~/types';
+import type { ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -83,6 +83,13 @@ export function useAdminApi() {
     return response.data.users;
   }
 
+  async function getUsersExport(): Promise<RecentUser[]> {
+    const response = await $fetch<ApiResponse<{ users: RecentUser[] }>>(
+      `${baseUrl}/api/admin/users/export`,
+    );
+    return response.data.users;
+  }
+
   async function getUserDetail(userId: string): Promise<UserDetailData | null> {
     try {
       const response = await $fetch<ApiResponse<UserDetailData>>(
@@ -132,6 +139,7 @@ export function useAdminApi() {
     getValidationPaths,
     getValidationPathDetail,
     getRecentUsers,
+    getUsersExport,
     getUserDetail,
     getCourses,
   };

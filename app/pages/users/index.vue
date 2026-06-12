@@ -45,7 +45,17 @@
 
         <div class="card bg-base-100 shadow">
           <div class="card-body">
-            <h3 class="card-title text-lg">All Users ({{ data.users.length }})</h3>
+            <div class="flex items-center justify-between gap-4">
+              <h3 class="card-title text-lg">All Users ({{ data.users.length }})</h3>
+              <button class="btn btn-sm btn-outline" :disabled="exporting" @click="exportUsersCsv">
+                <span v-if="exporting" class="loading loading-spinner loading-xs" />
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export CSV
+              </button>
+            </div>
+            <p v-if="exportError" class="text-error text-sm">{{ exportError }}</p>
             <div class="overflow-x-auto">
               <table class="table table-zebra">
                 <thead>
@@ -101,8 +111,9 @@
 <script setup lang="ts">
 import type { RecentUser } from '~/types';
 import { formatDate, formatDateTime } from '~/utils/formatters';
+import { downloadCsv } from '~/utils/csv';
 
-const { getRecentUsers } = useAdminApi();
+const { getRecentUsers, getUsersExport } = useAdminApi();
 
 const { data, pending, error, refresh } = useAsyncData(
   'recent-users',
@@ -110,10 +121,44 @@ const { data, pending, error, refresh } = useAsyncData(
   { default: () => null },
 );
 
+const exporting = ref(false);
+const exportError = ref('');
+
 function userName(user: RecentUser): string {
   if (user.firstName || user.lastName) {
     return [user.firstName, user.lastName].filter(Boolean).join(' ');
   }
   return user.email.split('@')[0];
+}
+
+async function exportUsersCsv() {
+  exporting.value = true;
+  exportError.value = '';
+
+  try {
+    const users = await getUsersExport();
+
+    const rows = users.map((user) => [
+      userName(user),
+      user.email,
+      user.phone || '',
+      user.isLearner ? 'Learner' : 'User',
+      user.otpVerification ? 'Yes' : 'No',
+      user.pathCount,
+      formatDate(user.createdAt),
+      user.lastLoginAt ? formatDateTime(user.lastLoginAt) : 'Never',
+    ]);
+
+    const today = new Date().toISOString().slice(0, 10);
+    downloadCsv(
+      `lxpath-users-${today}.csv`,
+      ['Name', 'Email', 'Phone', 'Type', 'Verified', 'Paths', 'Joined', 'Last Login'],
+      rows,
+    );
+  } catch {
+    exportError.value = 'Export failed. Please try again.';
+  } finally {
+    exporting.value = false;
+  }
 }
 </script>
