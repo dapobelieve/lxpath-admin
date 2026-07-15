@@ -19,6 +19,10 @@
           <option value="">All Levels</option>
           <option v-for="l in levels" :key="l" :value="l">{{ l }}</option>
         </select>
+        <select v-model="sourceFilter" class="select select-bordered select-sm" @change="applyFilters">
+          <option value="">All Sources</option>
+          <option v-for="s in sources" :key="s" :value="s">{{ s }}</option>
+        </select>
         <select v-model="verifiedFilter" class="select select-bordered select-sm" @change="applyFilters">
           <option value="">All</option>
           <option value="true">Verified</option>
@@ -66,7 +70,7 @@
             <tbody>
               <tr v-for="course in data.data" :key="course._id">
                 <td class="max-w-md">
-                  <div class="font-medium truncate">{{ course.title }}</div>
+                  <NuxtLink :to="`/courses/${course._id}`" class="font-medium truncate block link-hover">{{ course.title }}</NuxtLink>
                   <div v-if="course.institution" class="text-xs opacity-60 truncate">{{ course.institution }}</div>
                 </td>
                 <td class="text-sm">{{ course.provider || '—' }}</td>
@@ -133,12 +137,14 @@
 import { formatDate } from '~/utils/formatters';
 
 const { getCourses } = useAdminApi();
+const route = useRoute();
 
 const currentPage = ref(1);
 const pageSize = ref(20);
 const searchQuery = ref('');
 const providerFilter = ref('');
 const levelFilter = ref('');
+const sourceFilter = ref(typeof route.query.source === 'string' ? route.query.source : '');
 const verifiedFilter = ref('');
 const sortBy = ref('createdAt');
 const sortOrder = ref<'asc' | 'desc'>('desc');
@@ -152,6 +158,7 @@ const { data, pending, error, refresh } = useAsyncData(
       q: searchQuery.value || undefined,
       provider: providerFilter.value || undefined,
       level: levelFilter.value || undefined,
+      source: sourceFilter.value || undefined,
       isVerified: verifiedFilter.value ? verifiedFilter.value === 'true' : undefined,
       sortBy: sortBy.value,
       sortOrder: sortOrder.value,
@@ -161,9 +168,10 @@ const { data, pending, error, refresh } = useAsyncData(
 
 const providers = computed(() => data.value?.filters?.providers ?? []);
 const levels = computed(() => data.value?.filters?.levels ?? []);
+const sources = computed(() => data.value?.filters?.sources ?? []);
 
 const hasActiveFilters = computed(() =>
-  Boolean(searchQuery.value || providerFilter.value || levelFilter.value || verifiedFilter.value),
+  Boolean(searchQuery.value || providerFilter.value || levelFilter.value || sourceFilter.value || verifiedFilter.value),
 );
 
 const rangeStart = computed(() => {
@@ -185,6 +193,7 @@ function clearFilters() {
   searchQuery.value = '';
   providerFilter.value = '';
   levelFilter.value = '';
+  sourceFilter.value = '';
   verifiedFilter.value = '';
   currentPage.value = 1;
   refresh();

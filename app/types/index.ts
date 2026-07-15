@@ -158,6 +158,7 @@ export interface CourseSummary {
   reviewCount?: number;
   isVerified?: boolean;
   language?: string;
+  source?: string;
   priorityScore?: number;
   priorityTier?: string;
   createdAt: string;
@@ -167,10 +168,114 @@ export interface CourseSummary {
 export interface CourseFilters {
   providers: string[];
   levels: string[];
+  sources?: string[];
 }
 
 export interface PaginatedCourses {
   data: CourseSummary[];
   pageInfo: PageInfo;
   filters: CourseFilters;
+}
+
+export interface CourseDetail extends CourseSummary {
+  prerequisites?: string[];
+  subject?: string;
+  lastUpdated?: string;
+  meta?: Record<string, any>;
+}
+
+export type IngestionRunStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'completed_with_errors'
+  | 'quota_exhausted'
+  | 'failed'
+  | 'cancelled';
+export type IngestionRunTrigger = 'scheduled' | 'manual';
+export type IngestionQueryAction = 'created' | 'updated' | 'skipped' | 'failed';
+
+export interface IngestionQueryResult {
+  queryId: string;
+  career: string;
+  level: string;
+  query: string;
+  action: IngestionQueryAction;
+  videoId?: string;
+  courseId?: string;
+  courseTitle?: string;
+  channelTitle?: string;
+  viewCount?: number;
+  reason?: string;
+  error?: string;
+  quotaUnits: number;
+  taggedBy?: string;
+  durationMs: number;
+  completedAt?: string;
+}
+
+export interface IngestionRunSummary {
+  _id: string;
+  status: IngestionRunStatus;
+  trigger: IngestionRunTrigger;
+  activeLock?: string | null;
+  totalQueries: number;
+  processedCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  quotaBudget: number;
+  quotaBaseline: number;
+  quotaUnitsUsed: number;
+  quotaExhausted?: boolean;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  error?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface IngestionRunDetail extends IngestionRunSummary {
+  queryResults: IngestionQueryResult[];
+}
+
+export interface IngestionCareerCount {
+  career: string;
+  count: number;
+}
+
+export interface IngestionStats {
+  ingestedCourses: number;
+  coursesByCareer: IngestionCareerCount[];
+  activeRun: IngestionRunSummary | null;
+  lastRun: IngestionRunSummary | null;
+  quotaUsedToday: number;
+  quotaBudget: number;
+  enabledQueries: number;
+  nextRunAt: string | null;
+  ingestionEnabled: boolean;
+}
+
+export interface IngestionSettings {
+  _id?: string;
+  key?: string;
+  ingestionEnabled: boolean;
+  updatedAt?: string;
+}
+
+export interface IngestionQuery {
+  _id: string;
+  career: string;
+  careerRelevance?: string;
+  level: string;
+  query: string;
+  suitableFor?: string;
+  order: number;
+  enabled: boolean;
+}
+
+export interface PaginatedRuns {
+  data: IngestionRunSummary[];
+  pageInfo: PageInfo;
 }

@@ -1,4 +1,4 @@
-import type { ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters } from '~/types';
+import type { ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -19,6 +19,14 @@ interface PaginatedCoursesResponse {
   data: CourseSummary[];
   pageInfo: PageInfo;
   filters: CourseFilters;
+  status: string;
+  message: string;
+  code: number;
+}
+
+interface PaginatedRunsResponse {
+  data: IngestionRunSummary[];
+  pageInfo: PageInfo;
   status: string;
   message: string;
   code: number;
@@ -108,6 +116,7 @@ export function useAdminApi() {
     provider?: string;
     level?: string;
     category?: string;
+    source?: string;
     isVerified?: boolean;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
@@ -119,6 +128,7 @@ export function useAdminApi() {
     if (params.provider) query.provider = params.provider;
     if (params.level) query.level = params.level;
     if (params.category) query.category = params.category;
+    if (params.source) query.source = params.source;
     if (params.isVerified !== undefined) query.isVerified = String(params.isVerified);
     if (params.sortBy) query.sortBy = params.sortBy;
     if (params.sortOrder) query.sortOrder = params.sortOrder;
@@ -134,6 +144,97 @@ export function useAdminApi() {
     };
   }
 
+  async function getCourseDetail(courseId: string): Promise<CourseDetail | null> {
+    try {
+      const response = await $fetch<ApiResponse<{ course: CourseDetail }>>(
+        `${baseUrl}/api/admin/courses/${courseId}`,
+      );
+      return response.data.course;
+    } catch {
+      return null;
+    }
+  }
+
+  async function getIngestionStats(): Promise<IngestionStats> {
+    const response = await $fetch<ApiResponse<{ stats: IngestionStats }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/stats`,
+    );
+    return response.data.stats;
+  }
+
+  async function getIngestionRuns(params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    trigger?: string;
+  } = {}): Promise<PaginatedRuns> {
+    const query: Record<string, string> = {};
+    if (params.page) query.page = String(params.page);
+    if (params.limit) query.limit = String(params.limit);
+    if (params.status) query.status = params.status;
+    if (params.trigger) query.trigger = params.trigger;
+
+    const response = await $fetch<PaginatedRunsResponse>(
+      `${baseUrl}/api/admin/youtube-ingestion/runs`,
+      { params: query },
+    );
+    return {
+      data: response.data,
+      pageInfo: response.pageInfo,
+    };
+  }
+
+  async function getIngestionRunDetail(runId: string): Promise<IngestionRunDetail | null> {
+    try {
+      const response = await $fetch<ApiResponse<{ run: IngestionRunDetail }>>(
+        `${baseUrl}/api/admin/youtube-ingestion/runs/${runId}`,
+      );
+      return response.data.run;
+    } catch {
+      return null;
+    }
+  }
+
+  async function triggerIngestionRun(queryLimit?: number): Promise<{ queued: boolean }> {
+    const response = await $fetch<ApiResponse<{ queued: boolean }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/runs`,
+      { method: 'POST', body: queryLimit ? { queryLimit } : {} },
+    );
+    return response.data;
+  }
+
+  async function cancelIngestionRun(runId: string): Promise<{ cancelled: boolean }> {
+    const response = await $fetch<ApiResponse<{ cancelled: boolean }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/runs/${runId}/cancel`,
+      { method: 'POST' },
+    );
+    return response.data;
+  }
+
+  async function getIngestionSettings(): Promise<IngestionSettings> {
+    const response = await $fetch<ApiResponse<{ settings: IngestionSettings }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/settings`,
+    );
+    return response.data.settings;
+  }
+
+  async function updateIngestionSettings(
+    update: Partial<IngestionSettings>,
+  ): Promise<IngestionSettings> {
+    const response = await $fetch<ApiResponse<{ settings: IngestionSettings }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/settings`,
+      { method: 'PATCH', body: update },
+    );
+    return response.data.settings;
+  }
+
+  async function getIngestionQueries(): Promise<IngestionQuery[]> {
+    const response = await $fetch<ApiResponse<{ queries: IngestionQuery[] }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/queries`,
+    );
+    return response.data.queries;
+  }
+
   return {
     getValidationStats,
     getValidationPaths,
@@ -142,5 +243,14 @@ export function useAdminApi() {
     getUsersExport,
     getUserDetail,
     getCourses,
+    getCourseDetail,
+    getIngestionStats,
+    getIngestionRuns,
+    getIngestionRunDetail,
+    triggerIngestionRun,
+    cancelIngestionRun,
+    getIngestionSettings,
+    updateIngestionSettings,
+    getIngestionQueries,
   };
 }

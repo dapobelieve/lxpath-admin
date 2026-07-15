@@ -55,8 +55,36 @@ export function statusBadge(status: string): string {
     case 'active': return 'badge-success';
     case 'completed': return 'badge-info';
     case 'generating': return 'badge-warning';
+    case 'pending': return 'badge-ghost';
+    case 'running': return 'badge-warning';
+    case 'completed_with_errors': return 'badge-warning';
+    case 'quota_exhausted': return 'badge-error';
     case 'failed': return 'badge-error';
+    case 'cancelled': return 'badge-ghost';
     case 'paused': return 'badge-ghost';
     default: return 'badge-ghost';
   }
+}
+
+export function statusLabel(status: string): string {
+  return status ? status.replace(/_/g, ' ') : '—';
+}
+
+export function actionBadge(action: string): string {
+  switch (action) {
+    case 'created': return 'badge-success';
+    case 'updated': return 'badge-info';
+    case 'skipped': return 'badge-ghost';
+    case 'failed': return 'badge-error';
+    default: return 'badge-ghost';
+  }
+}
+
+export function formatDurationMs(ms: number): string {
+  if (!ms || ms < 0) return '—';
+  if (ms < 1000) return `${ms}ms`;
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ${seconds % 60}s`;
 }
