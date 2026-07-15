@@ -73,7 +73,26 @@
         </div>
 
         <div>
-          <h2 class="text-lg font-semibold mb-3">Query Outcomes ({{ run.queryResults.length }})</h2>
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 class="text-lg font-semibold">Query Outcomes ({{ run.queryResults.length }})</h2>
+            <TabGroup :selected-index="tabIndex" @change="tabIndex = $event">
+              <TabList class="tabs tabs-box tabs-sm w-fit">
+                <Tab
+                  v-for="tab in outcomeTabs"
+                  :key="tab.label"
+                  v-slot="{ selected }"
+                  as="template"
+                >
+                  <button class="tab gap-1.5" :class="selected ? 'tab-active' : ''">
+                    {{ tab.label }}
+                    <span class="badge badge-xs" :class="selected ? 'badge-neutral' : 'badge-ghost'">
+                      {{ tab.count }}
+                    </span>
+                  </button>
+                </Tab>
+              </TabList>
+            </TabGroup>
+          </div>
           <div class="overflow-x-auto">
             <table class="table table-zebra table-sm">
               <thead>
@@ -90,7 +109,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="result in run.queryResults" :key="result.queryId">
+                <tr v-for="result in visibleResults" :key="result.queryId">
                   <td class="max-w-40 truncate text-sm">{{ result.career }}</td>
                   <td><span class="badge badge-sm badge-ghost">{{ result.level }}</span></td>
                   <td class="max-w-56 truncate text-sm opacity-80">{{ result.query }}</td>
@@ -126,8 +145,10 @@
                     >&#9654; Watch</a>
                   </td>
                 </tr>
-                <tr v-if="run.queryResults.length === 0">
-                  <td colspan="9" class="text-center opacity-60 py-8">No query results recorded yet</td>
+                <tr v-if="visibleResults.length === 0">
+                  <td colspan="9" class="text-center opacity-60 py-8">
+                    {{ run.queryResults.length === 0 ? 'No query results recorded yet' : 'No outcomes in this category' }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -139,6 +160,7 @@
 </template>
 
 <script setup lang="ts">
+import { TabGroup, TabList, Tab } from '@headlessui/vue';
 import { actionBadge, formatDateTime, formatDurationMs, formatNumber, statusBadge, statusLabel } from '~/utils/formatters';
 
 const route = useRoute();
@@ -169,5 +191,30 @@ const runDuration = computed(() => {
   if (!run.value?.startedAt) return '—';
   const end = run.value.completedAt ? new Date(run.value.completedAt) : new Date();
   return formatDurationMs(end.getTime() - new Date(run.value.startedAt).getTime());
+});
+
+const tabIndex = ref(0);
+
+const OUTCOME_FILTERS = [
+  { label: 'All', action: '' },
+  { label: 'Created', action: 'created' },
+  { label: 'Updated', action: 'updated' },
+  { label: 'Skipped', action: 'skipped' },
+  { label: 'Failed', action: 'failed' },
+];
+
+const outcomeTabs = computed(() =>
+  OUTCOME_FILTERS.map((filter) => ({
+    label: filter.label,
+    count: filter.action
+      ? (run.value?.queryResults ?? []).filter((result) => result.action === filter.action).length
+      : run.value?.queryResults.length ?? 0,
+  })),
+);
+
+const visibleResults = computed(() => {
+  const results = run.value?.queryResults ?? [];
+  const action = OUTCOME_FILTERS[tabIndex.value]?.action;
+  return action ? results.filter((result) => result.action === action) : results;
 });
 </script>

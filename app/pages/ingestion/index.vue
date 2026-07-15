@@ -3,10 +3,16 @@
     <LayoutHeader title="YouTube Ingestion" @refresh="refreshAll" />
 
     <div class="p-6 space-y-6 overflow-auto">
-      <div v-if="actionError" class="alert alert-error">
-        <span>{{ actionError }}</span>
-        <button class="btn btn-sm btn-ghost" @click="actionError = ''">Dismiss</button>
-      </div>
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <div v-if="actionError" class="alert alert-error">
+          <span>{{ actionError }}</span>
+          <button class="btn btn-sm btn-ghost" @click="actionError = ''">Dismiss</button>
+        </div>
+      </transition>
 
       <div class="card bg-base-200 shadow">
         <div class="card-body py-4">
@@ -24,13 +30,19 @@
                   : 'Paused — scheduled and manual runs are blocked until switched back on' }}
               </p>
             </div>
-            <input
-              type="checkbox"
-              class="toggle toggle-success"
-              :checked="ingestionEnabled"
+            <Switch
+              :model-value="ingestionEnabled"
               :disabled="togglingEnabled || stats === null"
-              @change="toggleIngestion"
-            />
+              :class="ingestionEnabled ? 'bg-success' : 'bg-base-300'"
+              class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+              @update:model-value="toggleIngestion"
+            >
+              <span class="sr-only">Toggle continuous ingestion</span>
+              <span
+                :class="ingestionEnabled ? 'translate-x-6' : 'translate-x-1'"
+                class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200"
+              />
+            </Switch>
           </div>
         </div>
       </div>
@@ -61,62 +73,79 @@
         <div class="stat">
           <div class="stat-title">Next Scheduled Run</div>
           <div class="stat-value text-lg">{{ stats?.nextRunAt ? formatDateTime(stats.nextRunAt) : '—' }}</div>
-          <div class="stat-desc">{{ formatNumber(stats?.enabledQueries ?? 0) }} enabled queries</div>
-        </div>
-      </div>
-
-      <div v-if="activeRun" class="card bg-base-200 shadow">
-        <div class="card-body">
-          <div class="flex items-center justify-between">
-            <h2 class="card-title">
-              Active Run
-              <span class="badge" :class="statusBadge(activeRun.status)">{{ statusLabel(activeRun.status) }}</span>
-            </h2>
-            <button class="btn btn-error btn-sm" :disabled="cancelling" @click="cancelActiveRun">
-              <span v-if="cancelling" class="loading loading-spinner loading-xs" />
-              Cancel
+          <div class="stat-desc">
+            <button class="link" @click="queriesOpen = true">
+              {{ formatNumber(stats?.enabledQueries ?? 0) }} enabled queries
             </button>
           </div>
-          <div class="flex items-center gap-8 mt-2">
-            <div
-              class="radial-progress text-primary"
-              :style="`--value:${activeProgress}`"
-              role="progressbar"
-            >
-              {{ activeProgress }}%
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 flex-1">
-              <div>
-                <div class="text-xs opacity-60">Processed</div>
-                <div class="text-lg font-semibold">{{ activeRun.processedCount }} / {{ activeRun.totalQueries }}</div>
-              </div>
-              <div>
-                <div class="text-xs opacity-60">Created</div>
-                <div class="text-lg font-semibold text-success">{{ activeRun.createdCount }}</div>
-              </div>
-              <div>
-                <div class="text-xs opacity-60">Updated</div>
-                <div class="text-lg font-semibold text-info">{{ activeRun.updatedCount }}</div>
-              </div>
-              <div>
-                <div class="text-xs opacity-60">Skipped</div>
-                <div class="text-lg font-semibold opacity-70">{{ activeRun.skippedCount }}</div>
-              </div>
-              <div>
-                <div class="text-xs opacity-60">Failed</div>
-                <div class="text-lg font-semibold text-error">{{ activeRun.failedCount }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="text-sm opacity-70 mt-2">
-            Quota used this run: {{ formatNumber(activeRun.quotaUnitsUsed) }} units ·
-            <NuxtLink :to="`/ingestion/runs/${activeRun._id}`" class="link">View details</NuxtLink>
-          </div>
         </div>
       </div>
 
+      <transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="activeRun" class="card bg-base-200 shadow">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <h2 class="card-title">
+                Active Run
+                <span class="badge" :class="statusBadge(activeRun.status)">{{ statusLabel(activeRun.status) }}</span>
+              </h2>
+              <button class="btn btn-error btn-sm" :disabled="cancelling" @click="cancelOpen = true">
+                <span v-if="cancelling" class="loading loading-spinner loading-xs" />
+                Cancel
+              </button>
+            </div>
+            <div class="flex items-center gap-8 mt-2">
+              <div
+                class="radial-progress text-primary"
+                :style="`--value:${activeProgress}`"
+                role="progressbar"
+              >
+                {{ activeProgress }}%
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4 flex-1">
+                <div>
+                  <div class="text-xs opacity-60">Processed</div>
+                  <div class="text-lg font-semibold">{{ activeRun.processedCount }} / {{ activeRun.totalQueries }}</div>
+                </div>
+                <div>
+                  <div class="text-xs opacity-60">Created</div>
+                  <div class="text-lg font-semibold text-success">{{ activeRun.createdCount }}</div>
+                </div>
+                <div>
+                  <div class="text-xs opacity-60">Updated</div>
+                  <div class="text-lg font-semibold text-info">{{ activeRun.updatedCount }}</div>
+                </div>
+                <div>
+                  <div class="text-xs opacity-60">Skipped</div>
+                  <div class="text-lg font-semibold opacity-70">{{ activeRun.skippedCount }}</div>
+                </div>
+                <div>
+                  <div class="text-xs opacity-60">Failed</div>
+                  <div class="text-lg font-semibold text-error">{{ activeRun.failedCount }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="text-sm opacity-70 mt-2">
+              Quota used this run: {{ formatNumber(activeRun.quotaUnitsUsed) }} units ·
+              <NuxtLink :to="`/ingestion/runs/${activeRun._id}`" class="link">View details</NuxtLink>
+            </div>
+          </div>
+        </div>
+      </transition>
+
       <div class="flex items-center gap-3">
-        <button class="btn btn-primary btn-sm" :disabled="!!activeRun || triggering || !ingestionEnabled" @click="runNow">
+        <button
+          class="btn btn-primary btn-sm"
+          :disabled="!!activeRun || triggering || !ingestionEnabled"
+          @click="runNowOpen = true"
+        >
           <span v-if="triggering" class="loading loading-spinner loading-xs" />
           Run now
         </button>
@@ -125,7 +154,21 @@
       </div>
 
       <div>
-        <h2 class="text-lg font-semibold mb-3">Run History</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 class="text-lg font-semibold">Run History</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <IngestionFilterListbox
+              v-model="statusFilter"
+              label="Status"
+              :options="statusOptions"
+            />
+            <IngestionFilterListbox
+              v-model="triggerFilter"
+              label="Trigger"
+              :options="triggerOptions"
+            />
+          </div>
+        </div>
 
         <div v-if="pending" class="flex justify-center py-12">
           <span class="loading loading-spinner loading-lg" />
@@ -168,7 +211,9 @@
                   </td>
                 </tr>
                 <tr v-if="runsData.data.length === 0">
-                  <td colspan="11" class="text-center opacity-60 py-8">No ingestion runs yet — click "Run now" to start one</td>
+                  <td colspan="11" class="text-center opacity-60 py-8">
+                    {{ hasRunFilters ? 'No runs match these filters' : 'No ingestion runs yet — click "Run now" to start one' }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -187,10 +232,34 @@
         </div>
       </div>
     </div>
+
+    <IngestionRunNowDialog
+      :open="runNowOpen"
+      :enabled-queries="stats?.enabledQueries ?? 0"
+      :quota-used-today="stats?.quotaUsedToday ?? 0"
+      :quota-budget="stats?.quotaBudget ?? 0"
+      :loading="triggering"
+      @start="runNow"
+      @close="runNowOpen = false"
+    />
+
+    <IngestionConfirmDialog
+      :open="cancelOpen"
+      title="Cancel this run?"
+      message="Pending queries will be removed and the run will be marked cancelled. Courses already created stay in the catalog."
+      confirm-label="Cancel run"
+      cancel-label="Keep running"
+      :loading="cancelling"
+      @confirm="cancelActiveRun"
+      @close="cancelOpen = false"
+    />
+
+    <IngestionQueriesDialog :open="queriesOpen" @close="queriesOpen = false" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { Switch } from '@headlessui/vue';
 import { formatDateTime, formatNumber, statusBadge, statusLabel } from '~/utils/formatters';
 
 const { getIngestionStats, getIngestionRuns, triggerIngestionRun, cancelIngestionRun, updateIngestionSettings } = useAdminApi();
@@ -200,17 +269,45 @@ const triggering = ref(false);
 const cancelling = ref(false);
 const togglingEnabled = ref(false);
 const actionError = ref('');
+const runNowOpen = ref(false);
+const cancelOpen = ref(false);
+const queriesOpen = ref(false);
+const statusFilter = ref('');
+const triggerFilter = ref('');
+
+const statusOptions = [
+  { label: 'All', value: '' },
+  { label: 'Running', value: 'running' },
+  { label: 'Completed', value: 'completed' },
+  { label: 'Completed with errors', value: 'completed_with_errors' },
+  { label: 'Quota exhausted', value: 'quota_exhausted' },
+  { label: 'Failed', value: 'failed' },
+  { label: 'Cancelled', value: 'cancelled' },
+];
+
+const triggerOptions = [
+  { label: 'All', value: '' },
+  { label: 'Scheduled', value: 'scheduled' },
+  { label: 'Manual', value: 'manual' },
+];
 
 const { data: stats, refresh: refreshStats } = usePolling(getIngestionStats, 5000);
 
 const { data: runsData, pending, error, refresh } = useAsyncData(
   'ingestion-runs',
-  () => getIngestionRuns({ page: currentPage.value, limit: 20 }),
+  () =>
+    getIngestionRuns({
+      page: currentPage.value,
+      limit: 20,
+      status: statusFilter.value || undefined,
+      trigger: triggerFilter.value || undefined,
+    }),
   { default: () => null, watch: [currentPage] },
 );
 
 const activeRun = computed(() => stats.value?.activeRun ?? null);
 const ingestionEnabled = computed(() => stats.value?.ingestionEnabled !== false);
+const hasRunFilters = computed(() => Boolean(statusFilter.value || triggerFilter.value));
 
 const activeProgress = computed(() => {
   if (!activeRun.value || activeRun.value.totalQueries === 0) return 0;
@@ -232,6 +329,11 @@ watch(
   },
 );
 
+watch([statusFilter, triggerFilter], () => {
+  currentPage.value = 1;
+  refresh();
+});
+
 async function toggleIngestion() {
   actionError.value = '';
   togglingEnabled.value = true;
@@ -245,14 +347,16 @@ async function toggleIngestion() {
   }
 }
 
-async function runNow() {
+async function runNow(queryLimit?: number) {
   actionError.value = '';
   triggering.value = true;
   try {
-    await triggerIngestionRun();
+    await triggerIngestionRun(queryLimit);
+    runNowOpen.value = false;
     await refreshStats();
   } catch (e: any) {
     actionError.value = e?.data?.message || e?.message || 'Failed to queue ingestion run';
+    runNowOpen.value = false;
   } finally {
     triggering.value = false;
   }
@@ -264,10 +368,12 @@ async function cancelActiveRun() {
   cancelling.value = true;
   try {
     await cancelIngestionRun(activeRun.value._id);
+    cancelOpen.value = false;
     await refreshStats();
     await refresh();
   } catch (e: any) {
     actionError.value = e?.data?.message || e?.message || 'Failed to cancel ingestion run';
+    cancelOpen.value = false;
   } finally {
     cancelling.value = false;
   }
