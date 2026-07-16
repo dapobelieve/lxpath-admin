@@ -1,4 +1,4 @@
-import type { ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns } from '~/types';
+import type { ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -195,10 +195,10 @@ export function useAdminApi() {
     }
   }
 
-  async function triggerIngestionRun(queryLimit?: number): Promise<{ queued: boolean }> {
+  async function triggerIngestionRun(payload: TriggerRunPayload = {}): Promise<{ queued: boolean }> {
     const response = await $fetch<ApiResponse<{ queued: boolean }>>(
       `${baseUrl}/api/admin/youtube-ingestion/runs`,
-      { method: 'POST', body: queryLimit ? { queryLimit } : {} },
+      { method: 'POST', body: payload },
     );
     return response.data;
   }

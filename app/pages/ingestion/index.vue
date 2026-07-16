@@ -77,6 +77,9 @@
             <button class="link" @click="queriesOpen = true">
               {{ formatNumber(stats?.enabledQueries ?? 0) }} enabled queries
             </button>
+            <span v-if="stats?.queriesNeverRun" class="text-warning">
+              · {{ stats.queriesNeverRun }} never run
+            </span>
           </div>
         </div>
       </div>
@@ -261,6 +264,7 @@
 <script setup lang="ts">
 import { Switch } from '@headlessui/vue';
 import { formatDateTime, formatNumber, statusBadge, statusLabel } from '~/utils/formatters';
+import type { TriggerRunPayload } from '~/types';
 
 const { getIngestionStats, getIngestionRuns, triggerIngestionRun, cancelIngestionRun, updateIngestionSettings } = useAdminApi();
 
@@ -347,11 +351,11 @@ async function toggleIngestion() {
   }
 }
 
-async function runNow(queryLimit?: number) {
+async function runNow(payload: TriggerRunPayload) {
   actionError.value = '';
   triggering.value = true;
   try {
-    await triggerIngestionRun(queryLimit);
+    await triggerIngestionRun(payload);
     runNowOpen.value = false;
     await refreshStats();
   } catch (e: any) {

@@ -55,6 +55,10 @@
                       <div class="text-xs opacity-60">{{ group.relevance }}</div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
+                      <span
+                        v-if="neverRunCount(group)"
+                        class="badge badge-sm badge-warning badge-outline"
+                      >{{ neverRunCount(group) }} never run</span>
                       <span class="badge badge-sm badge-ghost">{{ group.queries.length }}</span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -75,13 +79,43 @@
                   >
                     <DisclosurePanel class="px-2 pb-1">
                       <table class="table table-sm">
+                        <thead>
+                          <tr class="text-xs opacity-50">
+                            <th>Level</th>
+                            <th>Query</th>
+                            <th>Last run</th>
+                            <th>Outcome</th>
+                            <th>Course found</th>
+                            <th class="text-right">Enabled</th>
+                          </tr>
+                        </thead>
                         <tbody>
                           <tr v-for="query in group.queries" :key="query._id">
-                            <td class="w-28">
+                            <td class="w-24">
                               <span class="badge badge-sm badge-ghost">{{ query.level }}</span>
                             </td>
                             <td class="font-mono text-xs">{{ query.query }}</td>
-                            <td class="text-xs opacity-60">{{ query.suitableFor }}</td>
+                            <td class="text-xs opacity-70 whitespace-nowrap">
+                              {{ query.lastRunAt ? formatDate(query.lastRunAt) : '' }}
+                              <span v-if="!query.lastRunAt" class="badge badge-xs badge-warning badge-outline">never</span>
+                            </td>
+                            <td>
+                              <span
+                                v-if="query.lastAction"
+                                class="badge badge-xs"
+                                :class="actionBadge(query.lastAction)"
+                                :title="query.lastError || ''"
+                              >{{ query.lastAction }}</span>
+                              <span v-else class="opacity-30 text-xs">—</span>
+                            </td>
+                            <td class="max-w-48">
+                              <NuxtLink
+                                v-if="query.lastCourseId"
+                                :to="`/courses/${query.lastCourseId}`"
+                                class="link link-primary text-xs line-clamp-1"
+                              >{{ query.lastCourseTitle || 'View course' }}</NuxtLink>
+                              <span v-else class="opacity-30 text-xs">—</span>
+                            </td>
                             <td class="w-16 text-right">
                               <span
                                 class="badge badge-xs"
@@ -117,6 +151,7 @@ import {
   TransitionRoot,
   TransitionChild,
 } from '@headlessui/vue';
+import { actionBadge, formatDate } from '~/utils/formatters';
 import type { IngestionQuery } from '~/types';
 
 const props = defineProps<{ open: boolean }>();
@@ -142,6 +177,10 @@ watch(
     }
   },
 );
+
+function neverRunCount(group: { queries: IngestionQuery[] }): number {
+  return group.queries.filter((query) => !query.lastRunAt).length;
+}
 
 const grouped = computed(() => {
   const groups = new Map<string, { career: string; relevance: string; queries: IngestionQuery[] }>();

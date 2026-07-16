@@ -255,6 +255,7 @@ export interface IngestionStats {
   enabledQueries: number;
   nextRunAt: string | null;
   ingestionEnabled: boolean;
+  queriesNeverRun: number;
 }
 
 export interface IngestionSettings {
@@ -273,9 +274,23 @@ export interface IngestionQuery {
   suitableFor?: string;
   order: number;
   enabled: boolean;
+  lastRunAt?: string | null;
+  lastAction?: string;
+  lastCourseId?: string;
+  lastCourseTitle?: string;
+  lastVideoId?: string;
+  lastError?: string;
+  timesRun?: number;
 }
 
 export interface PaginatedRuns {
   data: IngestionRunSummary[];
   pageInfo: PageInfo;
+}
+
+export interface TriggerRunPayload {
+  queryLimit?: number;
+  customQueries?: string[];
+  level?: 'Beginner' | 'Intermediate' | 'Advanced';
+  saveQueries?: boolean;
 }
