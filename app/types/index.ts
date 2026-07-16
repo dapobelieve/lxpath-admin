@@ -253,7 +253,6 @@ export interface IngestionStats {
   quotaUsedToday: number;
   quotaBudget: number;
   enabledQueries: number;
-  nextRunAt: string | null;
   ingestionEnabled: boolean;
   queriesNeverRun: number;
 }
@@ -289,8 +288,6 @@ export interface PaginatedRuns {
 }
 
 export interface TriggerRunPayload {
-  queryLimit?: number;
-  customQueries?: string[];
+  customQueries: string[];
   level?: 'Beginner' | 'Intermediate' | 'Advanced';
-  saveQueries?: boolean;
 }

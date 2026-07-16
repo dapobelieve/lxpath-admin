@@ -10,7 +10,7 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-black/50" aria-hidden="true" />
+        <div class="fixed inset-0 bg-base-200/80 backdrop-blur-sm" aria-hidden="true" />
       </TransitionChild>
 
       <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -33,8 +33,8 @@
                 <button class="btn btn-ghost btn-sm btn-circle" @click="$emit('close')">✕</button>
               </div>
               <DialogDescription class="text-sm opacity-70">
-                The curated search set each run works through — grouped by career, staged from
-                Beginner to Advanced.
+                Every ingested topic is recorded here with its latest outcome, so you can see
+                what ingestion has covered and what it hasn't.
               </DialogDescription>
 
               <div v-if="pending" class="flex justify-center py-10">

@@ -26,8 +26,8 @@
               </h2>
               <p class="text-sm opacity-70">
                 {{ ingestionEnabled
-                  ? 'Scheduled and manual runs are active'
-                  : 'Paused — scheduled and manual runs are blocked until switched back on' }}
+                  ? 'Admins can ingest topics into the course catalog'
+                  : 'Paused — topic ingestion is blocked until switched back on' }}
               </p>
             </div>
             <Switch
@@ -71,12 +71,10 @@
           <div class="stat-desc">{{ stats?.lastRun ? formatDateTime(stats.lastRun.createdAt) : 'No runs yet' }}</div>
         </div>
         <div class="stat">
-          <div class="stat-title">Next Scheduled Run</div>
-          <div class="stat-value text-lg">{{ stats?.nextRunAt ? formatDateTime(stats.nextRunAt) : '—' }}</div>
+          <div class="stat-title">Topic Library</div>
+          <div class="stat-value text-lg">{{ formatNumber(stats?.enabledQueries ?? 0) }}</div>
           <div class="stat-desc">
-            <button class="link" @click="queriesOpen = true">
-              {{ formatNumber(stats?.enabledQueries ?? 0) }} enabled queries
-            </button>
+            <button class="link" @click="queriesOpen = true">View coverage</button>
             <span v-if="stats?.queriesNeverRun" class="text-warning">
               · {{ stats.queriesNeverRun }} never run
             </span>
@@ -150,7 +148,7 @@
           @click="runNowOpen = true"
         >
           <span v-if="triggering" class="loading loading-spinner loading-xs" />
-          Run now
+          Ingest topics
         </button>
         <span v-if="activeRun" class="text-sm opacity-60">A run is already in progress</span>
         <span v-else-if="!ingestionEnabled" class="text-sm opacity-60">Ingestion is switched off</span>
@@ -238,7 +236,6 @@
 
     <IngestionRunNowDialog
       :open="runNowOpen"
-      :enabled-queries="stats?.enabledQueries ?? 0"
       :quota-used-today="stats?.quotaUsedToday ?? 0"
       :quota-budget="stats?.quotaBudget ?? 0"
       :loading="triggering"

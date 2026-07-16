@@ -10,7 +10,7 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-black/50" aria-hidden="true" />
+        <div class="fixed inset-0 bg-base-200/80 backdrop-blur-sm" aria-hidden="true" />
       </TransitionChild>
 
       <div class="fixed inset-0 flex items-center justify-center p-4">

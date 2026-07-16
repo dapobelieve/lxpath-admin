@@ -195,7 +195,7 @@ export function useAdminApi() {
     }
   }
 
-  async function triggerIngestionRun(payload: TriggerRunPayload = {}): Promise<{ queued: boolean }> {
+  async function triggerIngestionRun(payload: TriggerRunPayload): Promise<{ queued: boolean }> {
     const response = await $fetch<ApiResponse<{ queued: boolean }>>(
       `${baseUrl}/api/admin/youtube-ingestion/runs`,
       { method: 'POST', body: payload },
