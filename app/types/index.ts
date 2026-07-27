@@ -204,6 +204,7 @@ export interface IngestionQueryResult {
   videoId?: string;
   courseId?: string;
   courseTitle?: string;
+  courseDuration?: string;
   channelTitle?: string;
   viewCount?: number;
   reason?: string;

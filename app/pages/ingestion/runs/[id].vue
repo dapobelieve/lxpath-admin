@@ -104,7 +104,7 @@
                   <th>Course</th>
                   <th>Views</th>
                   <th>Tagged By</th>
-                  <th>Duration</th>
+                  <th>Course Length</th>
                   <th></th>
                 </tr>
               </thead>
@@ -134,7 +134,7 @@
                     </span>
                     <span v-else class="opacity-40">—</span>
                   </td>
-                  <td class="text-xs opacity-70">{{ formatDurationMs(result.durationMs) }}</td>
+                  <td class="text-xs opacity-70">{{ result.courseDuration || '—' }}</td>
                   <td>
                     <a
                       v-if="result.videoId"
