@@ -55,6 +55,7 @@
                 <th>Courses</th>
                 <th>Score</th>
                 <th>Valid</th>
+                <th>Strengths</th>
                 <th>Flags</th>
                 <th>Validated</th>
                 <th></th>
@@ -81,6 +82,12 @@
                 <td>
                   <span v-if="path.validationResult" class="badge badge-sm" :class="path.validationResult.isValid ? 'badge-success' : 'badge-error'">
                     {{ path.validationResult.isValid ? 'Yes' : 'No' }}
+                  </span>
+                  <span v-else class="opacity-40">—</span>
+                </td>
+                <td>
+                  <span v-if="path.validationResult?.highlights?.length" class="text-success font-medium">
+                    {{ path.validationResult.highlights.length }}
                   </span>
                   <span v-else class="opacity-40">—</span>
                 </td>

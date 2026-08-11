@@ -41,6 +41,23 @@ export function severityBadge(severity: 'low' | 'medium' | 'high'): string {
   }
 }
 
+export function strengthBadge(strength: 'strong' | 'exceptional'): string {
+  switch (strength) {
+    case 'exceptional': return 'badge-success';
+    case 'strong': return 'badge-info';
+  }
+}
+
+export function highlightCategoryLabel(category: string): string {
+  switch (category) {
+    case 'career_alignment': return 'Career Alignment';
+    case 'skill_gap_filled': return 'Fills Skill Gap';
+    case 'progression': return 'Progression';
+    case 'value': return 'Value';
+    default: return category;
+  }
+}
+
 export function categoryLabel(category: string): string {
   switch (category) {
     case 'relevance': return 'Relevance';

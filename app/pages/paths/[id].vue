@@ -57,8 +57,27 @@
                 </div>
               </div>
 
+              <div v-if="highlights.length > 0" class="mb-6">
+                <h4 class="font-semibold text-sm mb-3">Strengths ({{ highlights.length }})</h4>
+                <div class="space-y-3">
+                  <div v-for="highlight in highlights" :key="highlight.courseId + highlight.category" class="border border-success/40 rounded-lg p-4">
+                    <div class="flex items-center gap-2 flex-wrap mb-2">
+                      <span class="badge badge-sm" :class="strengthBadge(highlight.strength)">{{ highlight.strength }}</span>
+                      <span class="badge badge-sm badge-outline">{{ highlightCategoryLabel(highlight.category) }}</span>
+                      <span class="badge badge-sm badge-ghost">{{ highlight.difficulty }}</span>
+                    </div>
+                    <p class="font-medium text-sm">{{ highlight.courseTitle }}</p>
+                    <p class="text-sm opacity-80 mt-1">{{ highlight.reason }}</p>
+                    <div class="mt-2 p-2 bg-base-200 rounded text-sm">
+                      <span class="font-semibold opacity-70">Career impact:</span> {{ highlight.careerImpact }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-sm opacity-60 mb-6">Validated before strengths were captured.</div>
+
               <div v-if="path.validationResult.flags.length > 0">
-                <h4 class="font-semibold text-sm mb-3">Flags ({{ path.validationResult.flags.length }})</h4>
+                <h4 class="font-semibold text-sm mb-3">Issues to review ({{ path.validationResult.flags.length }})</h4>
                 <div class="space-y-3">
                   <div v-for="flag in path.validationResult.flags" :key="flag.courseId + flag.category" class="border border-base-300 rounded-lg p-4">
                     <div class="flex items-center gap-2 flex-wrap mb-2">
@@ -74,7 +93,6 @@
                   </div>
                 </div>
               </div>
-              <div v-else class="text-sm opacity-60">No flags — all courses pass validation.</div>
             </div>
           </div>
 
@@ -133,7 +151,7 @@
 
 <script setup lang="ts">
 import type { PathDetail } from '~/types';
-import { statusBadge, scoreColor, severityBadge, categoryLabel, formatDate, formatDateTime } from '~/utils/formatters';
+import { statusBadge, scoreColor, severityBadge, categoryLabel, strengthBadge, highlightCategoryLabel, formatDate, formatDateTime } from '~/utils/formatters';
 
 const route = useRoute();
 const { getValidationPathDetail } = useAdminApi();
@@ -143,4 +161,6 @@ const { data: path, pending, refresh } = useAsyncData<PathDetail | null>(
   () => getValidationPathDetail(route.params.id as string),
   { default: () => null },
 );
+
+const highlights = computed(() => path.value?.validationResult?.highlights ?? []);
 </script>

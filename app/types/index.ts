@@ -3,6 +3,19 @@ export type ValidationSeverity = 'low' | 'medium' | 'high';
 export type PathStatus = 'generating' | 'active' | 'completed' | 'paused' | 'failed';
 export type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced';
 
+export type HighlightCategory = 'career_alignment' | 'skill_gap_filled' | 'progression' | 'value';
+export type HighlightStrength = 'strong' | 'exceptional';
+
+export interface ValidationHighlight {
+  courseId: string;
+  courseTitle: string;
+  difficulty: CourseDifficulty;
+  category: HighlightCategory;
+  strength: HighlightStrength;
+  reason: string;
+  careerImpact: string;
+}
+
 export interface ValidationFlag {
   courseId: string;
   courseTitle: string;
@@ -17,6 +30,7 @@ export interface ValidationResult {
   score: number;
   isValid: boolean;
   overallAssessment: string;
+  highlights?: ValidationHighlight[];
   flags: ValidationFlag[];
   validatedAt: string;
   modelUsed: string;
@@ -40,6 +54,7 @@ export interface ValidationPathSummary {
   validationResult?: {
     score: number;
     isValid: boolean;
+    highlights?: ValidationHighlight[];
     flags: ValidationFlag[];
     validatedAt: string;
   };
@@ -53,10 +68,18 @@ export interface ValidationStats {
   validCount: number;
   invalidCount: number;
   highSeverityFlagCount: number;
+  averageHighlightsPerPath: number;
+  highlightBreakdownByCategory: Record<HighlightCategory, number>;
   flagBreakdownByCategory: Record<ValidationCategory, number>;
   flagBreakdownBySeverity: Record<ValidationSeverity, number>;
   scoreBuckets: Record<string, number>;
   pathsByStatus: Record<string, number>;
+  recentHighlights: Array<{
+    pathId: string;
+    pathName: string;
+    highlight: ValidationHighlight;
+    validatedAt: string;
+  }>;
   recentFlags: Array<{
     pathId: string;
     pathName: string;

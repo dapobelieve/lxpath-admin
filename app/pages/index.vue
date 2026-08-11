@@ -12,8 +12,10 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <DashboardScoreChart :buckets="data.scoreBuckets" />
-          <DashboardFlagBreakdown :by-category="data.flagBreakdownByCategory" :by-severity="data.flagBreakdownBySeverity" />
+          <DashboardHighlightBreakdown :by-category="data.highlightBreakdownByCategory" :average-per-path="data.averageHighlightsPerPath" />
         </div>
+
+        <DashboardFlagBreakdown :by-category="data.flagBreakdownByCategory" :by-severity="data.flagBreakdownBySeverity" />
 
         <DashboardRecentFlags :flags="data.recentFlags" />
       </template>
