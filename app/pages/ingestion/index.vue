@@ -56,6 +56,14 @@
           </div>
         </div>
         <div class="stat">
+          <div class="stat-title">Awaiting Review</div>
+          <div class="stat-value text-lg">{{ formatNumber(stats?.review?.shortlisted ?? 0) }}</div>
+          <div class="stat-desc">
+            <NuxtLink to="/ingestion/review" class="link">Review shortlist</NuxtLink>
+            <span v-if="stats?.review?.pending" class="opacity-70"> · {{ stats.review.pending }} scoring</span>
+          </div>
+        </div>
+        <div class="stat">
           <div class="stat-title">Quota Used Today</div>
           <div class="stat-value" :class="quotaColor">{{ formatNumber(stats?.quotaUsedToday ?? 0) }}</div>
           <div class="stat-desc">of {{ formatNumber(stats?.quotaBudget ?? 0) }} units</div>

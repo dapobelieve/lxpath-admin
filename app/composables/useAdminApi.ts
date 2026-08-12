@@ -1,4 +1,4 @@
-import type { ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload } from '~/types';
+import type { PaginatedReviewCourses, ReviewCourse, ReviewSummary, CoursePoolStatus, ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -19,6 +19,15 @@ interface PaginatedCoursesResponse {
   data: CourseSummary[];
   pageInfo: PageInfo;
   filters: CourseFilters;
+  status: string;
+  message: string;
+  code: number;
+}
+
+interface PaginatedReviewResponse {
+  data: ReviewCourse[];
+  pageInfo: PageInfo;
+  filters: { careers: string[] };
   status: string;
   message: string;
   code: number;
@@ -228,6 +237,64 @@ export function useAdminApi() {
     return response.data.settings;
   }
 
+  async function getReviewCourses(params: {
+    page?: number;
+    limit?: number;
+    status?: CoursePoolStatus;
+    career?: string;
+    minScore?: number;
+    q?: string;
+  } = {}): Promise<PaginatedReviewCourses> {
+    const query: Record<string, string> = {};
+    if (params.page) query.page = String(params.page);
+    if (params.limit) query.limit = String(params.limit);
+    if (params.status) query.status = params.status;
+    if (params.career) query.career = params.career;
+    if (params.minScore !== undefined) query.minScore = String(params.minScore);
+    if (params.q) query.q = params.q;
+
+    const response = await $fetch<PaginatedReviewResponse>(
+      `${baseUrl}/api/admin/youtube-ingestion/review`,
+      { params: query },
+    );
+    return {
+      data: response.data,
+      pageInfo: response.pageInfo,
+      filters: response.filters,
+    };
+  }
+
+  async function getReviewSummary(): Promise<ReviewSummary> {
+    const response = await $fetch<ApiResponse<{ summary: ReviewSummary }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/review/summary`,
+    );
+    return response.data.summary;
+  }
+
+  async function sweepPendingCourses(): Promise<{ queued: number }> {
+    const response = await $fetch<ApiResponse<{ queued: number }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/review/sweep`,
+      { method: 'POST' },
+    );
+    return response.data;
+  }
+
+  async function approveReviewCourses(courseIds: string[]): Promise<{ approved: number }> {
+    const response = await $fetch<ApiResponse<{ approved: number }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/review/approve`,
+      { method: 'POST', body: { courseIds } },
+    );
+    return response.data;
+  }
+
+  async function rejectReviewCourses(courseIds: string[]): Promise<{ rejected: number }> {
+    const response = await $fetch<ApiResponse<{ rejected: number }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/review/reject`,
+      { method: 'POST', body: { courseIds } },
+    );
+    return response.data;
+  }
+
   async function getIngestionQueries(): Promise<IngestionQuery[]> {
     const response = await $fetch<ApiResponse<{ queries: IngestionQuery[] }>>(
       `${baseUrl}/api/admin/youtube-ingestion/queries`,
@@ -252,5 +319,10 @@ export function useAdminApi() {
     getIngestionSettings,
     updateIngestionSettings,
     getIngestionQueries,
+    getReviewCourses,
+    getReviewSummary,
+    sweepPendingCourses,
+    approveReviewCourses,
+    rejectReviewCourses,
   };
 }

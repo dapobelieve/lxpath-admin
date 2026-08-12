@@ -269,6 +269,51 @@ export interface IngestionCareerCount {
   count: number;
 }
 
+export type CoursePoolStatus = 'pending' | 'shortlisted' | 'rejected' | 'approved';
+
+export interface CourseQualityReview {
+  score: number;
+  verdict: string;
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  evaluatedAt: string;
+  evaluatedBy: 'llm' | 'fallback';
+  threshold: number;
+}
+
+export interface ReviewCourse {
+  _id: string;
+  title: string;
+  description?: string;
+  link: string;
+  duration?: string;
+  institution?: string;
+  level?: string;
+  category?: string;
+  subject?: string;
+  skillsLearned?: string[];
+  poolStatus: CoursePoolStatus;
+  qualityReview: CourseQualityReview | null;
+  poolDecidedAt?: string | null;
+  createdAt: string;
+  meta?: Record<string, any>;
+}
+
+export interface PaginatedReviewCourses {
+  data: ReviewCourse[];
+  pageInfo: PageInfo;
+  filters: { careers: string[] };
+}
+
+export interface ReviewSummary {
+  pending: number;
+  shortlisted: number;
+  rejected: number;
+  approved: number;
+  stalled: number;
+}
+
 export interface IngestionStats {
   ingestedCourses: number;
   coursesByCareer: IngestionCareerCount[];
@@ -279,12 +324,14 @@ export interface IngestionStats {
   enabledQueries: number;
   ingestionEnabled: boolean;
   queriesNeverRun: number;
+  review: ReviewSummary;
 }
 
 export interface IngestionSettings {
   _id?: string;
   key?: string;
   ingestionEnabled: boolean;
+  reviewThreshold: number;
   updatedAt?: string;
 }
 
