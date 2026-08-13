@@ -1,160 +1,20 @@
-<template>
-  <div class="flex flex-col h-full">
-    <LayoutHeader :title="path?.pathName || 'Path Detail'" @refresh="refresh" />
-
-    <div class="p-6 space-y-6 overflow-auto">
-      <div v-if="pending" class="flex justify-center py-12">
-        <span class="loading loading-spinner loading-lg" />
-      </div>
-
-      <template v-else-if="path">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="card bg-base-100 shadow">
-            <div class="card-body">
-              <h3 class="card-title text-lg">Path Info</h3>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="opacity-70">Career</span>
-                  <span class="font-medium">{{ path.selectedCareer || '—' }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="opacity-70">Status</span>
-                  <span class="badge badge-sm" :class="statusBadge(path.status)">{{ path.status }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="opacity-70">Courses</span>
-                  <span class="font-medium">{{ path.totalCourses }} ({{ path.completedCourses }} completed)</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="opacity-70">Progress</span>
-                  <progress class="progress progress-primary w-32" :value="path.overallProgress" max="100" />
-                </div>
-                <div class="flex justify-between">
-                  <span class="opacity-70">Budget</span>
-                  <span class="font-medium">{{ path.budgetAmount ?? '—' }} {{ path.budgetCurrency || '' }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="opacity-70">Created</span>
-                  <span>{{ formatDate(path.createdAt) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="path.validationResult" class="card bg-base-100 shadow lg:col-span-2">
-            <div class="card-body">
-              <h3 class="card-title text-lg">Validation Result</h3>
-              <div class="flex items-center gap-4 mb-4">
-                <div class="radial-progress" :class="scoreColor(path.validationResult.score)" :style="{ '--value': path.validationResult.score, '--size': '4rem', '--thickness': '6px' }">
-                  {{ path.validationResult.score }}
-                </div>
-                <div>
-                  <span class="badge" :class="path.validationResult.isValid ? 'badge-success' : 'badge-error'">
-                    {{ path.validationResult.isValid ? 'Valid' : 'Issues Found' }}
-                  </span>
-                  <p class="text-sm mt-1 opacity-80">{{ path.validationResult.overallAssessment }}</p>
-                  <p class="text-xs mt-1 opacity-50">Validated {{ formatDateTime(path.validationResult.validatedAt) }} &middot; {{ path.validationResult.modelUsed }}</p>
-                </div>
-              </div>
-
-              <div v-if="highlights.length > 0" class="mb-6">
-                <h4 class="font-semibold text-sm mb-3">Strengths ({{ highlights.length }})</h4>
-                <div class="space-y-3">
-                  <div v-for="highlight in highlights" :key="highlight.courseId + highlight.category" class="border border-success/40 rounded-lg p-4">
-                    <div class="flex items-center gap-2 flex-wrap mb-2">
-                      <span class="badge badge-sm" :class="strengthBadge(highlight.strength)">{{ highlight.strength }}</span>
-                      <span class="badge badge-sm badge-outline">{{ highlightCategoryLabel(highlight.category) }}</span>
-                      <span class="badge badge-sm badge-ghost">{{ highlight.difficulty }}</span>
-                    </div>
-                    <p class="font-medium text-sm">{{ highlight.courseTitle }}</p>
-                    <p class="text-sm opacity-80 mt-1">{{ highlight.reason }}</p>
-                    <div class="mt-2 p-2 bg-base-200 rounded text-sm">
-                      <span class="font-semibold opacity-70">Career impact:</span> {{ highlight.careerImpact }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="text-sm opacity-60 mb-6">Validated before strengths were captured.</div>
-
-              <div v-if="path.validationResult.flags.length > 0">
-                <h4 class="font-semibold text-sm mb-3">Issues to review ({{ path.validationResult.flags.length }})</h4>
-                <div class="space-y-3">
-                  <div v-for="flag in path.validationResult.flags" :key="flag.courseId + flag.category" class="border border-base-300 rounded-lg p-4">
-                    <div class="flex items-center gap-2 flex-wrap mb-2">
-                      <span class="badge badge-sm" :class="severityBadge(flag.severity)">{{ flag.severity }}</span>
-                      <span class="badge badge-sm badge-outline">{{ categoryLabel(flag.category) }}</span>
-                      <span class="badge badge-sm badge-ghost">{{ flag.difficulty }}</span>
-                    </div>
-                    <p class="font-medium text-sm">{{ flag.courseTitle }}</p>
-                    <p class="text-sm opacity-80 mt-1">{{ flag.reason }}</p>
-                    <div class="mt-2 p-2 bg-base-200 rounded text-sm">
-                      <span class="font-semibold opacity-70">Suggestion:</span> {{ flag.suggestion }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="card bg-base-100 shadow lg:col-span-2">
-            <div class="card-body">
-              <h3 class="card-title text-lg">Validation Result</h3>
-              <p class="text-sm opacity-60">This path has not been validated yet.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow">
-          <div class="card-body">
-            <h3 class="card-title text-lg">Courses</h3>
-            <div class="space-y-6">
-              <div v-for="difficulty in ['beginner', 'intermediate', 'advanced']" :key="difficulty">
-                <h4 class="font-semibold text-sm capitalize mb-2 opacity-70">{{ difficulty }} ({{ path.courses[difficulty]?.length || 0 }})</h4>
-                <div v-if="path.courses[difficulty]?.length" class="overflow-x-auto">
-                  <table class="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Title</th>
-                        <th>Provider</th>
-                        <th>Cost</th>
-                        <th>Skills</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="course in path.courses[difficulty]" :key="course.courseId">
-                        <td class="max-w-xs truncate">{{ course.title }}</td>
-                        <td>{{ course.provider }}</td>
-                        <td>{{ course.cost }}</td>
-                        <td>
-                          <div class="flex flex-wrap gap-1">
-                            <span v-for="skill in course.skillsLearned.slice(0, 3)" :key="skill" class="badge badge-xs badge-outline">{{ skill }}</span>
-                            <span v-if="course.skillsLearned.length > 3" class="badge badge-xs badge-ghost">+{{ course.skillsLearned.length - 3 }}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <p v-else class="text-sm opacity-50">No courses at this level.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <div v-else class="alert alert-error">
-        <span>Path not found</span>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
+import { ArrowLeft, Sparkles, TriangleAlert } from '@lucide/vue';
 import type { PathDetail } from '~/types';
-import { statusBadge, scoreColor, severityBadge, categoryLabel, strengthBadge, highlightCategoryLabel, formatDate, formatDateTime } from '~/utils/formatters';
+import {
+  categoryLabel,
+  formatDate,
+  formatDateTime,
+  highlightCategoryLabel,
+  scoreColor,
+  severityVariant,
+  strengthVariant,
+} from '~/utils/formatters';
 
 const route = useRoute();
 const { getValidationPathDetail } = useAdminApi();
+
+const icons = { Sparkles, TriangleAlert };
 
 const { data: path, pending, refresh } = useAsyncData<PathDetail | null>(
   'path-detail',
@@ -163,4 +23,226 @@ const { data: path, pending, refresh } = useAsyncData<PathDetail | null>(
 );
 
 const highlights = computed(() => path.value?.validationResult?.highlights ?? []);
+const flags = computed(() => path.value?.validationResult?.flags ?? []);
+const levels = ['beginner', 'intermediate', 'advanced'] as const;
 </script>
+
+<template>
+  <AppPage
+    :title="path?.pathName || 'Path detail'"
+    :description="path?.selectedCareer"
+    :refreshing="pending"
+    @refresh="refresh"
+  >
+    <template #actions>
+      <Button as-child variant="ghost" size="sm">
+        <NuxtLink to="/paths">
+          <ArrowLeft />
+          Back
+        </NuxtLink>
+      </Button>
+    </template>
+
+    <template v-if="pending && !path">
+      <div class="grid gap-4 lg:grid-cols-3">
+        <Skeleton class="h-64 rounded-xl" />
+        <Skeleton class="h-64 rounded-xl lg:col-span-2" />
+      </div>
+      <Skeleton class="h-72 rounded-xl" />
+    </template>
+
+    <template v-else-if="path">
+      <div class="grid gap-4 lg:grid-cols-3">
+        <Card class="h-fit">
+          <CardHeader>
+            <CardTitle class="text-base">Path info</CardTitle>
+          </CardHeader>
+          <CardContent class="divide-y">
+            <AppKeyValue label="Career" :value="path.selectedCareer || '—'" />
+            <AppKeyValue label="Status">
+              <AppStatusBadge :status="path.status" />
+            </AppKeyValue>
+            <AppKeyValue label="Courses">
+              {{ path.totalCourses }}
+              <span class="font-normal text-muted-foreground">({{ path.completedCourses }} completed)</span>
+            </AppKeyValue>
+            <AppKeyValue label="Progress">
+              <span class="flex items-center gap-2">
+                <Progress :model-value="path.overallProgress" class="h-1.5 w-24" />
+                <span class="tabular-nums">{{ path.overallProgress }}%</span>
+              </span>
+            </AppKeyValue>
+            <AppKeyValue label="Budget">
+              {{ path.budgetAmount ?? '—' }} {{ path.budgetCurrency || '' }}
+            </AppKeyValue>
+            <AppKeyValue label="Created" :value="formatDate(path.createdAt)" />
+          </CardContent>
+        </Card>
+
+        <Card class="lg:col-span-2">
+          <CardHeader>
+            <CardTitle class="text-base">Validation result</CardTitle>
+            <CardDescription v-if="path.validationResult">
+              Validated {{ formatDateTime(path.validationResult.validatedAt) }} · {{ path.validationResult.modelUsed }}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent v-if="path.validationResult" class="space-y-6">
+            <div class="flex items-start gap-5">
+              <AppProgressRing
+                :value="path.validationResult.score"
+                :size="76"
+                :class="scoreColor(path.validationResult.score)"
+              >
+                <span class="text-lg">{{ path.validationResult.score }}</span>
+              </AppProgressRing>
+
+              <div class="min-w-0 flex-1">
+                <Badge :variant="path.validationResult.isValid ? 'success' : 'destructive'">
+                  {{ path.validationResult.isValid ? 'Valid' : 'Issues found' }}
+                </Badge>
+                <p class="mt-2 text-sm text-muted-foreground">
+                  {{ path.validationResult.overallAssessment }}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <section>
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <component :is="icons.Sparkles" class="size-4 text-success" />
+                Strengths
+                <Badge variant="muted">{{ highlights.length }}</Badge>
+              </h3>
+
+              <div v-if="highlights.length" class="space-y-3">
+                <article
+                  v-for="highlight in highlights"
+                  :key="`${highlight.courseId}-${highlight.category}`"
+                  class="rounded-lg border border-success/30 bg-success/5 p-4"
+                >
+                  <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                    <Badge :variant="strengthVariant(highlight.strength)" class="capitalize">
+                      {{ highlight.strength }}
+                    </Badge>
+                    <Badge variant="outline">{{ highlightCategoryLabel(highlight.category) }}</Badge>
+                    <Badge variant="muted" class="capitalize">{{ highlight.difficulty }}</Badge>
+                  </div>
+                  <p class="text-sm font-medium">{{ highlight.courseTitle }}</p>
+                  <p class="mt-1 text-sm text-muted-foreground">{{ highlight.reason }}</p>
+                  <p class="mt-2 rounded-md bg-background/60 p-2 text-sm">
+                    <span class="font-medium text-muted-foreground">Career impact:</span>
+                    {{ highlight.careerImpact }}
+                  </p>
+                </article>
+              </div>
+              <p v-else class="text-sm text-muted-foreground">
+                Validated before strengths were captured.
+              </p>
+            </section>
+
+            <section v-if="flags.length">
+              <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <component :is="icons.TriangleAlert" class="size-4 text-warning" />
+                Issues to review
+                <Badge variant="muted">{{ flags.length }}</Badge>
+              </h3>
+
+              <div class="space-y-3">
+                <article
+                  v-for="flag in flags"
+                  :key="`${flag.courseId}-${flag.category}`"
+                  class="rounded-lg border p-4"
+                >
+                  <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                    <Badge :variant="severityVariant(flag.severity)" class="capitalize">
+                      {{ flag.severity }}
+                    </Badge>
+                    <Badge variant="outline">{{ categoryLabel(flag.category) }}</Badge>
+                    <Badge variant="muted" class="capitalize">{{ flag.difficulty }}</Badge>
+                  </div>
+                  <p class="text-sm font-medium">{{ flag.courseTitle }}</p>
+                  <p class="mt-1 text-sm text-muted-foreground">{{ flag.reason }}</p>
+                  <p class="mt-2 rounded-md bg-muted p-2 text-sm">
+                    <span class="font-medium text-muted-foreground">Suggestion:</span>
+                    {{ flag.suggestion }}
+                  </p>
+                </article>
+              </div>
+            </section>
+          </CardContent>
+
+          <CardContent v-else>
+            <p class="text-sm text-muted-foreground">This path has not been validated yet.</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card class="gap-0 overflow-hidden py-0">
+        <div class="border-b px-4 py-3">
+          <h2 class="text-sm font-semibold">Courses</h2>
+          <p class="text-xs text-muted-foreground">Grouped by difficulty</p>
+        </div>
+
+        <Tabs default-value="beginner" class="gap-0">
+          <div class="border-b px-4 py-3">
+            <TabsList>
+              <TabsTrigger v-for="level in levels" :key="level" :value="level" class="capitalize">
+                {{ level }}
+                <Badge variant="muted" class="ml-1.5">{{ path.courses[level]?.length || 0 }}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent v-for="level in levels" :key="level" :value="level" class="mt-0">
+            <div
+              v-if="path.courses[level]?.length"
+              class="overflow-x-auto [&_th]:h-10 [&_th]:px-4 [&_th]:text-xs [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-muted-foreground [&_td]:px-4 [&_td]:py-3"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow class="bg-muted/40 hover:bg-muted/40">
+                    <TableHead>Title</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Cost</TableHead>
+                    <TableHead>Skills</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="course in path.courses[level]" :key="course.courseId">
+                    <TableCell class="max-w-sm truncate font-medium">{{ course.title }}</TableCell>
+                    <TableCell class="text-muted-foreground">{{ course.provider }}</TableCell>
+                    <TableCell class="tabular-nums">{{ course.cost }}</TableCell>
+                    <TableCell>
+                      <div class="flex flex-wrap gap-1">
+                        <Badge
+                          v-for="skill in course.skillsLearned.slice(0, 3)"
+                          :key="skill"
+                          variant="muted"
+                        >
+                          {{ skill }}
+                        </Badge>
+                        <Badge v-if="course.skillsLearned.length > 3" variant="outline">
+                          +{{ course.skillsLearned.length - 3 }}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+
+            <AppEmptyState
+              v-else
+              title="No courses at this level"
+              description="This path has nothing scheduled for this difficulty."
+            />
+          </TabsContent>
+        </Tabs>
+      </Card>
+    </template>
+
+    <AppErrorState v-else title="Path not found" message="This path may have been deleted." @retry="refresh" />
+  </AppPage>
+</template>

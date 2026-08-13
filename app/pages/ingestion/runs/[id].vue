@@ -1,167 +1,12 @@
-<template>
-  <div class="flex flex-col h-full">
-    <LayoutHeader title="Ingestion Run Detail" @refresh="refresh" />
-
-    <div class="p-6 space-y-6 overflow-auto">
-      <div v-if="loading && !run" class="flex justify-center py-12">
-        <span class="loading loading-spinner loading-lg" />
-      </div>
-
-      <div v-else-if="!run" class="alert alert-error">
-        <span>Ingestion run not found</span>
-        <NuxtLink to="/ingestion" class="btn btn-sm">Back to Ingestion</NuxtLink>
-      </div>
-
-      <template v-else>
-        <div class="flex items-center gap-3">
-          <NuxtLink to="/ingestion" class="btn btn-sm btn-ghost">&larr; Back</NuxtLink>
-          <span class="badge badge-lg" :class="statusBadge(run.status)">{{ statusLabel(run.status) }}</span>
-          <span class="badge badge-outline capitalize">{{ run.trigger }}</span>
-          <span v-if="run.quotaExhausted" class="badge badge-error badge-outline">quota exhausted</span>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="card bg-base-200 shadow">
-            <div class="card-body">
-              <h2 class="card-title text-base">Timing</h2>
-              <div class="space-y-1 text-sm">
-                <div class="flex justify-between"><span class="opacity-60">Created</span><span>{{ formatDateTime(run.createdAt) }}</span></div>
-                <div class="flex justify-between"><span class="opacity-60">Started</span><span>{{ run.startedAt ? formatDateTime(run.startedAt) : '—' }}</span></div>
-                <div class="flex justify-between"><span class="opacity-60">Completed</span><span>{{ run.completedAt ? formatDateTime(run.completedAt) : '—' }}</span></div>
-                <div class="flex justify-between"><span class="opacity-60">Duration</span><span>{{ runDuration }}</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card bg-base-200 shadow">
-            <div class="card-body">
-              <h2 class="card-title text-base">Progress</h2>
-              <div class="flex items-center gap-6">
-                <div class="radial-progress text-primary" :style="`--value:${progress}`" role="progressbar">
-                  {{ progress }}%
-                </div>
-                <div class="space-y-1 text-sm">
-                  <div><span class="text-success font-semibold">{{ run.createdCount }}</span> created</div>
-                  <div><span class="text-info font-semibold">{{ run.updatedCount }}</span> updated</div>
-                  <div><span class="opacity-70 font-semibold">{{ run.skippedCount }}</span> skipped</div>
-                  <div><span class="text-error font-semibold">{{ run.failedCount }}</span> failed</div>
-                </div>
-              </div>
-              <div class="text-sm opacity-70">{{ run.processedCount }} / {{ run.totalQueries }} queries processed</div>
-            </div>
-          </div>
-
-          <div class="card bg-base-200 shadow">
-            <div class="card-body">
-              <h2 class="card-title text-base">Quota</h2>
-              <div class="space-y-1 text-sm">
-                <div class="flex justify-between"><span class="opacity-60">Used this run</span><span>{{ formatNumber(run.quotaUnitsUsed) }} units</span></div>
-                <div class="flex justify-between"><span class="opacity-60">Baseline (earlier today)</span><span>{{ formatNumber(run.quotaBaseline) }} units</span></div>
-                <div class="flex justify-between"><span class="opacity-60">Budget</span><span>{{ formatNumber(run.quotaBudget) }} units</span></div>
-              </div>
-              <progress
-                class="progress progress-primary"
-                :value="run.quotaBaseline + run.quotaUnitsUsed"
-                :max="run.quotaBudget"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div v-if="run.error" class="alert alert-warning">
-          <span>{{ run.error }}</span>
-        </div>
-
-        <div>
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <h2 class="text-lg font-semibold">Query Outcomes ({{ run.queryResults.length }})</h2>
-            <TabGroup :selected-index="tabIndex" @change="tabIndex = $event">
-              <TabList class="tabs tabs-box tabs-sm w-fit">
-                <Tab
-                  v-for="tab in outcomeTabs"
-                  :key="tab.label"
-                  v-slot="{ selected }"
-                  as="template"
-                >
-                  <button class="tab gap-1.5" :class="selected ? 'tab-active' : ''">
-                    {{ tab.label }}
-                    <span class="badge badge-xs" :class="selected ? 'badge-neutral' : 'badge-ghost'">
-                      {{ tab.count }}
-                    </span>
-                  </button>
-                </Tab>
-              </TabList>
-            </TabGroup>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="table table-zebra table-sm">
-              <thead>
-                <tr>
-                  <th>Career</th>
-                  <th>Level</th>
-                  <th>Search Query</th>
-                  <th>Outcome</th>
-                  <th>Course</th>
-                  <th>Views</th>
-                  <th>Tagged By</th>
-                  <th>Course Length</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="result in visibleResults" :key="result.queryId">
-                  <td class="max-w-40 truncate text-sm">{{ result.career }}</td>
-                  <td><span class="badge badge-sm badge-ghost">{{ result.level }}</span></td>
-                  <td class="max-w-56 truncate text-sm opacity-80">{{ result.query }}</td>
-                  <td>
-                    <span class="badge badge-sm" :class="actionBadge(result.action)">{{ result.action }}</span>
-                    <div v-if="result.reason" class="text-xs opacity-60">{{ statusLabel(result.reason) }}</div>
-                    <div v-if="result.error" class="text-xs text-error max-w-56 truncate" :title="result.error">{{ result.error }}</div>
-                  </td>
-                  <td class="max-w-64">
-                    <NuxtLink
-                      v-if="result.courseId"
-                      :to="`/courses/${result.courseId}`"
-                      class="link link-primary text-sm line-clamp-2"
-                    >{{ result.courseTitle }}</NuxtLink>
-                    <span v-else class="opacity-40">—</span>
-                    <div v-if="result.channelTitle" class="text-xs opacity-60 truncate">{{ result.channelTitle }}</div>
-                  </td>
-                  <td class="text-sm">{{ result.viewCount ? formatNumber(result.viewCount) : '—' }}</td>
-                  <td>
-                    <span v-if="result.taggedBy" class="badge badge-xs" :class="result.taggedBy === 'llm' ? 'badge-info badge-outline' : 'badge-ghost'">
-                      {{ result.taggedBy }}
-                    </span>
-                    <span v-else class="opacity-40">—</span>
-                  </td>
-                  <td class="text-xs opacity-70">{{ result.courseDuration || '—' }}</td>
-                  <td>
-                    <a
-                      v-if="result.videoId"
-                      :href="`https://www.youtube.com/watch?v=${result.videoId}`"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="btn btn-xs btn-ghost"
-                    >&#9654; Watch</a>
-                  </td>
-                </tr>
-                <tr v-if="visibleResults.length === 0">
-                  <td colspan="9" class="text-center opacity-60 py-8">
-                    {{ run.queryResults.length === 0 ? 'No query results recorded yet' : 'No outcomes in this category' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </template>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { TabGroup, TabList, Tab } from '@headlessui/vue';
-import { actionBadge, formatDateTime, formatDurationMs, formatNumber, statusBadge, statusLabel } from '~/utils/formatters';
+import { ArrowLeft, Play, TriangleAlert } from '@lucide/vue';
+import {
+  actionVariant,
+  formatDateTime,
+  formatDurationMs,
+  formatNumber,
+  statusLabel,
+} from '~/utils/formatters';
 
 const route = useRoute();
 const runId = route.params.id as string;
@@ -170,7 +15,17 @@ const { getIngestionRunDetail } = useAdminApi();
 
 const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'quota_exhausted', 'failed', 'cancelled'];
 
+const OUTCOME_FILTERS = [
+  { label: 'All', action: '' },
+  { label: 'Created', action: 'created' },
+  { label: 'Updated', action: 'updated' },
+  { label: 'Skipped', action: 'skipped' },
+  { label: 'Failed', action: 'failed' },
+];
+
 const { data: run, loading, refresh, stop } = usePolling(() => getIngestionRunDetail(runId), 3000);
+
+const activeOutcome = ref('');
 
 watch([run, loading], ([currentRun, isLoading]) => {
   if (!isLoading && !currentRun) {
@@ -193,19 +48,14 @@ const runDuration = computed(() => {
   return formatDurationMs(end.getTime() - new Date(run.value.startedAt).getTime());
 });
 
-const tabIndex = ref(0);
-
-const OUTCOME_FILTERS = [
-  { label: 'All', action: '' },
-  { label: 'Created', action: 'created' },
-  { label: 'Updated', action: 'updated' },
-  { label: 'Skipped', action: 'skipped' },
-  { label: 'Failed', action: 'failed' },
-];
+const quotaPercent = computed(() => {
+  if (!run.value || !run.value.quotaBudget) return 0;
+  return Math.min(100, ((run.value.quotaBaseline + run.value.quotaUnitsUsed) / run.value.quotaBudget) * 100);
+});
 
 const outcomeTabs = computed(() =>
   OUTCOME_FILTERS.map((filter) => ({
-    label: filter.label,
+    ...filter,
     count: filter.action
       ? (run.value?.queryResults ?? []).filter((result) => result.action === filter.action).length
       : run.value?.queryResults.length ?? 0,
@@ -214,7 +64,208 @@ const outcomeTabs = computed(() =>
 
 const visibleResults = computed(() => {
   const results = run.value?.queryResults ?? [];
-  const action = OUTCOME_FILTERS[tabIndex.value]?.action;
-  return action ? results.filter((result) => result.action === action) : results;
+  return activeOutcome.value
+    ? results.filter((result) => result.action === activeOutcome.value)
+    : results;
 });
 </script>
+
+<template>
+  <AppPage
+    title="Ingestion run"
+    :description="run ? `${statusLabel(run.status)} · ${run.trigger}` : undefined"
+    :refreshing="loading"
+    @refresh="refresh"
+  >
+    <template #actions>
+      <Button as-child variant="ghost" size="sm">
+        <NuxtLink to="/ingestion">
+          <ArrowLeft />
+          Back
+        </NuxtLink>
+      </Button>
+    </template>
+
+    <template v-if="loading && !run">
+      <div class="grid gap-4 lg:grid-cols-3">
+        <Skeleton v-for="n in 3" :key="n" class="h-48 rounded-xl" />
+      </div>
+      <Skeleton class="h-72 rounded-xl" />
+    </template>
+
+    <template v-else-if="run">
+      <div class="flex flex-wrap items-center gap-2">
+        <AppStatusBadge :status="run.status" />
+        <Badge variant="outline" class="capitalize">{{ run.trigger }}</Badge>
+        <Badge v-if="run.quotaExhausted" variant="destructive">quota exhausted</Badge>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">Timing</CardTitle>
+          </CardHeader>
+          <CardContent class="divide-y">
+            <AppKeyValue label="Created" :value="formatDateTime(run.createdAt)" />
+            <AppKeyValue label="Started" :value="run.startedAt ? formatDateTime(run.startedAt) : '—'" />
+            <AppKeyValue label="Completed" :value="run.completedAt ? formatDateTime(run.completedAt) : '—'" />
+            <AppKeyValue label="Duration" :value="runDuration" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">Progress</CardTitle>
+            <CardDescription>
+              {{ run.processedCount }} / {{ run.totalQueries }} queries processed
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="flex items-center gap-6">
+            <AppProgressRing :value="progress" class="text-primary" />
+            <div class="space-y-1 text-sm">
+              <div><span class="font-semibold tabular-nums text-success">{{ run.createdCount }}</span> created</div>
+              <div><span class="font-semibold tabular-nums text-info">{{ run.updatedCount }}</span> updated</div>
+              <div>
+                <span class="font-semibold tabular-nums text-muted-foreground">{{ run.skippedCount }}</span> skipped
+              </div>
+              <div>
+                <span class="font-semibold tabular-nums text-destructive">{{ run.failedCount }}</span> failed
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">Quota</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-3">
+            <div class="divide-y">
+              <AppKeyValue label="Used this run" :value="`${formatNumber(run.quotaUnitsUsed)} units`" />
+              <AppKeyValue label="Baseline (earlier today)" :value="`${formatNumber(run.quotaBaseline)} units`" />
+              <AppKeyValue label="Budget" :value="`${formatNumber(run.quotaBudget)} units`" />
+            </div>
+            <Progress :model-value="quotaPercent" class="h-1.5" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Alert v-if="run.error" variant="destructive" class="border-destructive/30 bg-destructive/5">
+        <TriangleAlert />
+        <AlertTitle>Run reported an error</AlertTitle>
+        <AlertDescription>{{ run.error }}</AlertDescription>
+      </Alert>
+
+      <AppDataCard title="Query outcomes" :meta="`${formatNumber(run.queryResults.length)} queries`">
+        <template #actions>
+          <Tabs v-model="activeOutcome">
+            <TabsList>
+              <TabsTrigger v-for="tab in outcomeTabs" :key="tab.label" :value="tab.action">
+                {{ tab.label }}
+                <Badge variant="muted" class="ml-1.5">{{ tab.count }}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </template>
+
+        <Table>
+          <TableHeader>
+            <TableRow class="bg-muted/40 hover:bg-muted/40">
+              <TableHead>Career</TableHead>
+              <TableHead>Level</TableHead>
+              <TableHead>Search query</TableHead>
+              <TableHead>Outcome</TableHead>
+              <TableHead>Course</TableHead>
+              <TableHead class="text-right">Views</TableHead>
+              <TableHead>Tagged by</TableHead>
+              <TableHead>Length</TableHead>
+              <TableHead class="w-24" />
+            </TableRow>
+          </TableHeader>
+
+          <TableBody v-if="visibleResults.length">
+            <TableRow v-for="result in visibleResults" :key="result.queryId">
+              <TableCell class="max-w-40 truncate">{{ result.career }}</TableCell>
+              <TableCell>
+                <Badge variant="muted" class="capitalize">{{ result.level }}</Badge>
+              </TableCell>
+              <TableCell class="max-w-56 truncate font-mono text-xs text-muted-foreground">
+                {{ result.query }}
+              </TableCell>
+              <TableCell>
+                <Badge :variant="actionVariant(result.action)">{{ result.action }}</Badge>
+                <div v-if="result.reason" class="mt-0.5 text-xs capitalize text-muted-foreground">
+                  {{ statusLabel(result.reason) }}
+                </div>
+                <div
+                  v-if="result.error"
+                  class="mt-0.5 max-w-56 truncate text-xs text-destructive"
+                  :title="result.error"
+                >
+                  {{ result.error }}
+                </div>
+              </TableCell>
+              <TableCell class="w-[18rem] min-w-[14rem] max-w-[18rem] whitespace-normal">
+                <NuxtLink
+                  v-if="result.courseId"
+                  :to="`/courses/${result.courseId}`"
+                  class="line-clamp-2 text-sm hover:text-primary hover:underline"
+                >
+                  {{ result.courseTitle }}
+                </NuxtLink>
+                <span v-else class="text-muted-foreground/50">—</span>
+                <div v-if="result.channelTitle" class="truncate text-xs text-muted-foreground">
+                  {{ result.channelTitle }}
+                </div>
+              </TableCell>
+              <TableCell class="text-right tabular-nums">
+                {{ result.viewCount ? formatNumber(result.viewCount) : '—' }}
+              </TableCell>
+              <TableCell>
+                <Badge v-if="result.taggedBy" :variant="result.taggedBy === 'llm' ? 'info' : 'muted'">
+                  {{ result.taggedBy }}
+                </Badge>
+                <span v-else class="text-muted-foreground/50">—</span>
+              </TableCell>
+              <TableCell class="text-xs text-muted-foreground tabular-nums">
+                {{ result.courseDuration || '—' }}
+              </TableCell>
+              <TableCell class="text-right">
+                <Button v-if="result.videoId" as-child variant="ghost" size="sm">
+                  <a
+                    :href="`https://www.youtube.com/watch?v=${result.videoId}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Play />
+                    Watch
+                  </a>
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+
+          <TableBody v-else>
+            <TableRow class="hover:bg-transparent">
+              <TableCell colspan="9" class="p-0">
+                <AppEmptyState
+                  title="Nothing here"
+                  :description="run.queryResults.length === 0
+                    ? 'No query results recorded yet.'
+                    : 'No outcomes in this category.'"
+                />
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </AppDataCard>
+    </template>
+
+    <AppErrorState
+      v-else
+      title="Ingestion run not found"
+      message="It may have been removed."
+      @retry="refresh"
+    />
+  </AppPage>
+</template>

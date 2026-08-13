@@ -1,27 +1,27 @@
-<template>
-  <tr v-for="row in rows" :key="row" class="border-t border-base-200">
-    <td class="px-4 py-3">
-      <div class="skeleton h-4 w-48 mb-2" />
-      <div class="skeleton h-3 w-28" />
-    </td>
-    <td class="px-4 py-3"><div class="skeleton h-4 w-20" /></td>
-    <td class="px-4 py-3"><div class="skeleton h-5 w-16 rounded-full" /></td>
-    <td class="px-4 py-3">
-      <div class="flex gap-1">
-        <div class="skeleton h-5 w-14 rounded-full" />
-        <div class="skeleton h-5 w-14 rounded-full" />
-      </div>
-    </td>
-    <td class="px-4 py-3"><div class="skeleton h-4 w-14" /></td>
-    <td class="px-4 py-3"><div class="skeleton h-4 w-10" /></td>
-    <td class="px-4 py-3"><div class="skeleton h-5 w-20 rounded-full" /></td>
-    <td class="px-4 py-3"><div class="skeleton h-4 w-20" /></td>
-    <td class="px-4 py-3"><div class="skeleton h-6 w-6 rounded-md ml-auto" /></td>
-  </tr>
-</template>
-
 <script setup lang="ts">
 const props = withDefaults(defineProps<{ count?: number }>(), { count: 8 });
 
 const rows = computed(() => Array.from({ length: props.count }, (_, i) => i));
 </script>
+
+<template>
+  <TableRow v-for="row in rows" :key="row" class="hover:bg-transparent">
+    <TableCell>
+      <Skeleton class="mb-2 h-4 w-48" />
+      <Skeleton class="h-3 w-28" />
+    </TableCell>
+    <TableCell><Skeleton class="h-4 w-20" /></TableCell>
+    <TableCell><Skeleton class="h-5 w-16 rounded-full" /></TableCell>
+    <TableCell>
+      <div class="flex gap-1">
+        <Skeleton class="h-5 w-14 rounded-full" />
+        <Skeleton class="h-5 w-14 rounded-full" />
+      </div>
+    </TableCell>
+    <TableCell><Skeleton class="h-4 w-14" /></TableCell>
+    <TableCell><Skeleton class="h-4 w-10" /></TableCell>
+    <TableCell><Skeleton class="h-5 w-20 rounded-full" /></TableCell>
+    <TableCell><Skeleton class="h-4 w-20" /></TableCell>
+    <TableCell><Skeleton class="ml-auto size-6 rounded-md" /></TableCell>
+  </TableRow>
+</template>

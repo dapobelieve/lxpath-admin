@@ -1,235 +1,8 @@
-<template>
-  <div class="flex flex-col h-full">
-    <LayoutHeader title="Course Review" @refresh="refreshAll" />
-
-    <div class="p-6 space-y-4 overflow-auto">
-      <transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 -translate-y-1"
-        enter-to-class="opacity-100 translate-y-0"
-      >
-        <div v-if="actionMessage" class="alert" :class="actionError ? 'alert-error' : 'alert-success'">
-          <span>{{ actionMessage }}</span>
-          <button class="btn btn-sm btn-ghost" @click="actionMessage = ''">Dismiss</button>
-        </div>
-      </transition>
-
-      <div class="stats stats-horizontal shadow w-full">
-        <div class="stat">
-          <div class="stat-title">Awaiting Scoring</div>
-          <div class="stat-value text-lg">{{ formatNumber(summary?.pending ?? 0) }}</div>
-          <div class="stat-desc">
-            <span v-if="summary?.stalled" class="text-warning">{{ summary.stalled }} stalled</span>
-            <span v-else>Scored automatically</span>
-          </div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Shortlisted</div>
-          <div class="stat-value text-lg text-primary">{{ formatNumber(summary?.shortlisted ?? 0) }}</div>
-          <div class="stat-desc">Waiting for your approval</div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">In Course Pool</div>
-          <div class="stat-value text-lg text-success">{{ formatNumber(summary?.approved ?? 0) }}</div>
-          <div class="stat-desc">Used by path generation</div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Rejected</div>
-          <div class="stat-value text-lg">{{ formatNumber(summary?.rejected ?? 0) }}</div>
-          <div class="stat-desc">Below quality bar</div>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="relative">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search title..."
-            aria-label="Search shortlisted courses"
-            class="input input-bordered input-sm w-72"
-            @keyup.enter="applyFilters"
-          />
-        </div>
-
-        <UiFilterListbox v-model="statusFilter" label="Status" :options="statusOptions" />
-        <UiFilterListbox v-model="careerFilter" label="Career" :options="careerOptions" />
-        <UiFilterListbox v-model="minScoreFilter" label="Min score" :options="scoreOptions" width-class="min-w-36" />
-
-        <div class="ml-auto flex items-center gap-3">
-          <button
-            v-if="summary?.pending || summary?.stalled"
-            class="btn btn-sm btn-ghost"
-            :disabled="sweeping"
-            @click="scoreNow"
-          >
-            <span v-if="sweeping" class="loading loading-spinner loading-xs" />
-            Score now
-          </button>
-          <button class="btn btn-sm btn-ghost" @click="applyFilters">Apply</button>
-        </div>
-      </div>
-
-      <div class="rounded-box border border-base-300 bg-base-100 overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-200 px-4 py-3">
-          <div class="flex items-center gap-3">
-            <h2 class="text-sm font-semibold">{{ statusLabel }}</h2>
-            <span class="text-xs text-base-content/60">
-              <template v-if="data">{{ data.pageInfo.total.toLocaleString() }} courses</template>
-              <template v-else>Loading…</template>
-            </span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <span v-if="selectedIds.length" class="text-xs text-base-content/60">
-              {{ selectedIds.length }} selected
-            </span>
-            <button
-              class="btn btn-sm btn-ghost"
-              :disabled="!selectedIds.length || submitting"
-              @click="reject"
-            >
-              Reject
-            </button>
-            <button
-              class="btn btn-sm btn-primary"
-              :disabled="!selectedIds.length || submitting"
-              @click="approve"
-            >
-              <span v-if="submitting" class="loading loading-spinner loading-xs" />
-              Add to course pool
-            </button>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-base-200/60">
-                <th class="px-4 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm"
-                    aria-label="Select all on page"
-                    :checked="allSelected"
-                    :indeterminate="someSelected"
-                    @change="toggleAll"
-                  />
-                </th>
-                <th :class="headerClass">Course</th>
-                <th :class="headerClass">Career / Level</th>
-                <th :class="headerClass">Score</th>
-                <th :class="headerClass">Assessment</th>
-                <th :class="headerClass">Added</th>
-              </tr>
-            </thead>
-
-            <tbody v-if="pending" class="divide-y divide-base-200">
-              <tr v-for="n in 8" :key="n">
-                <td colspan="6" class="px-4 py-4">
-                  <div class="h-4 w-full animate-pulse rounded bg-base-200" />
-                </td>
-              </tr>
-            </tbody>
-
-            <tbody v-else-if="rows.length" class="divide-y divide-base-200">
-              <tr
-                v-for="course in rows"
-                :key="course._id"
-                class="transition-colors hover:bg-base-200/50"
-                :class="isSelected(course._id) ? 'bg-primary/5' : ''"
-              >
-                <td class="px-4 py-3 align-top">
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm"
-                    :aria-label="`Select ${course.title}`"
-                    :checked="isSelected(course._id)"
-                    @change="toggleOne(course._id)"
-                  />
-                </td>
-                <td class="max-w-md px-4 py-3 align-top">
-                  <a :href="course.link" target="_blank" rel="noopener" class="block truncate font-medium hover:text-primary">
-                    {{ course.title }}
-                  </a>
-                  <div class="truncate text-xs text-base-content/50">
-                    {{ course.institution || 'Unknown channel' }}
-                    <span v-if="course.duration"> · {{ course.duration }}</span>
-                    <span v-if="course.meta?.viewCount"> · {{ formatNumber(course.meta.viewCount) }} views</span>
-                  </div>
-                </td>
-                <td class="px-4 py-3 align-top">
-                  <div class="text-base-content/80">{{ course.category || '—' }}</div>
-                  <span v-if="course.level" class="badge badge-sm badge-ghost mt-1 capitalize">{{ course.level }}</span>
-                </td>
-                <td class="px-4 py-3 align-top">
-                  <span
-                    v-if="course.qualityReview"
-                    class="badge badge-lg font-semibold tabular-nums"
-                    :class="scoreBadge(course.qualityReview.score)"
-                  >
-                    {{ course.qualityReview.score }}
-                  </span>
-                  <span v-else class="text-base-content/30">—</span>
-                  <div v-if="course.qualityReview" class="mt-1 text-xs capitalize text-base-content/50">
-                    {{ course.qualityReview.verdict }}
-                  </div>
-                </td>
-                <td class="max-w-sm px-4 py-3 align-top">
-                  <p v-if="course.qualityReview?.summary" class="text-xs text-base-content/70">
-                    {{ course.qualityReview.summary }}
-                  </p>
-                  <ul v-if="course.qualityReview?.concerns?.length" class="mt-1 space-y-0.5">
-                    <li
-                      v-for="concern in course.qualityReview.concerns.slice(0, 2)"
-                      :key="concern"
-                      class="text-xs text-warning"
-                    >
-                      · {{ concern }}
-                    </li>
-                  </ul>
-                </td>
-                <td class="px-4 py-3 align-top text-xs tabular-nums text-base-content/60">
-                  {{ formatDate(course.createdAt) }}
-                </td>
-              </tr>
-            </tbody>
-
-            <tbody v-else>
-              <tr>
-                <td colspan="6" class="px-4 py-16">
-                  <div class="mx-auto flex max-w-sm flex-col items-center text-center">
-                    <h3 class="text-sm font-semibold">Nothing here yet</h3>
-                    <p class="mt-1 text-sm text-base-content/60">
-                      Ingested courses are scored automatically. Winners show up here for approval.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-if="data && data.pageInfo.totalPages > 1" class="border-t border-base-200 px-4 py-3">
-          <LayoutPagination
-            :current-page="currentPage"
-            :total-pages="data.pageInfo.totalPages"
-            @update:page="goToPage"
-          />
-        </div>
-      </div>
-
-      <div v-if="error && !pending" class="alert alert-error">
-        <span>Failed to load review queue: {{ error.message }}</span>
-        <button class="btn btn-sm" @click="refreshAll">Retry</button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
+import { Clock, Loader2, Search, Sparkles, ThumbsUp, XCircle } from '@lucide/vue';
+import { toast } from 'vue-sonner';
 import type { CoursePoolStatus } from '~/types';
-import { formatDate } from '~/utils/formatters';
+import { formatDate, formatNumber, scoreVariant } from '~/utils/formatters';
 
 const {
   getReviewCourses,
@@ -239,7 +12,7 @@ const {
   sweepPendingCourses,
 } = useAdminApi();
 
-const headerClass = 'px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-base-content/50';
+const icons = { Clock, Sparkles, ThumbsUp, XCircle };
 
 const currentPage = ref(1);
 const searchQuery = ref('');
@@ -249,8 +22,6 @@ const minScoreFilter = ref('');
 const selectedIds = ref<string[]>([]);
 const submitting = ref(false);
 const sweeping = ref(false);
-const actionMessage = ref('');
-const actionError = ref(false);
 
 const statusOptions = [
   { label: 'Shortlisted', value: 'shortlisted' },
@@ -300,9 +71,12 @@ const allSelected = computed(
   () => rows.value.length > 0 && rows.value.every((course) => isSelected(course._id)),
 );
 
-const someSelected = computed(
-  () => selectedIds.value.length > 0 && !allSelected.value,
-);
+const someSelected = computed(() => selectedIds.value.length > 0 && !allSelected.value);
+
+const selectAllState = computed<boolean | 'indeterminate'>(() => {
+  if (allSelected.value) return true;
+  return someSelected.value ? 'indeterminate' : false;
+});
 
 function isSelected(courseId: string): boolean {
   return selectedIds.value.includes(courseId);
@@ -316,17 +90,6 @@ function toggleOne(courseId: string) {
 
 function toggleAll() {
   selectedIds.value = allSelected.value ? [] : rows.value.map((course) => course._id);
-}
-
-function formatNumber(value: number): string {
-  return value.toLocaleString();
-}
-
-function scoreBadge(score: number): string {
-  if (score >= 85) return 'badge-success';
-  if (score >= 70) return 'badge-primary';
-  if (score >= 40) return 'badge-warning';
-  return 'badge-error';
 }
 
 function applyFilters() {
@@ -350,17 +113,14 @@ async function runDecision(
   verb: string,
 ) {
   submitting.value = true;
-  actionMessage.value = '';
 
   try {
     const result = await action([...selectedIds.value]);
     const count = result.approved ?? result.rejected ?? 0;
-    actionError.value = false;
-    actionMessage.value = `${count} course${count === 1 ? '' : 's'} ${verb}.`;
+    toast.success(`${count} course${count === 1 ? '' : 's'} ${verb}.`);
     await refreshAll();
   } catch (err: any) {
-    actionError.value = true;
-    actionMessage.value = err?.data?.message || `Failed to ${verb.replace(/ed$/, '')} courses`;
+    toast.error(err?.data?.message || `Failed to ${verb.replace(/ed$/, '')} courses`);
   } finally {
     submitting.value = false;
   }
@@ -371,12 +131,10 @@ async function scoreNow() {
 
   try {
     const result = await sweepPendingCourses();
-    actionError.value = false;
-    actionMessage.value = `${result.queued} course${result.queued === 1 ? '' : 's'} queued for scoring.`;
+    toast.success(`${result.queued} course${result.queued === 1 ? '' : 's'} queued for scoring.`);
     await refreshAll();
   } catch (err: any) {
-    actionError.value = true;
-    actionMessage.value = err?.data?.message || 'Failed to queue scoring';
+    toast.error(err?.data?.message || 'Failed to queue scoring');
   } finally {
     sweeping.value = false;
   }
@@ -389,4 +147,216 @@ function approve() {
 function reject() {
   return runDecision(rejectReviewCourses, 'rejected');
 }
+
+watch([statusFilter, careerFilter, minScoreFilter], applyFilters);
 </script>
+
+<template>
+  <AppPage
+    title="Course review"
+    description="Approve LLM-scored courses into the generation pool"
+    :refreshing="pending"
+    @refresh="refreshAll"
+  >
+    <template #actions>
+      <Button
+        v-if="summary?.pending || summary?.stalled"
+        variant="outline"
+        size="sm"
+        :disabled="sweeping"
+        @click="scoreNow"
+      >
+        <Loader2 v-if="sweeping" class="animate-spin" />
+        Score now
+      </Button>
+    </template>
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <AppStatCard
+        label="Awaiting scoring"
+        :value="formatNumber(summary?.pending ?? 0)"
+        :icon="icons.Clock"
+      >
+        <template #hint>
+          <span v-if="summary?.stalled" class="text-warning">{{ summary.stalled }} stalled</span>
+          <span v-else>Scored automatically</span>
+        </template>
+      </AppStatCard>
+      <AppStatCard
+        label="Shortlisted"
+        :value="formatNumber(summary?.shortlisted ?? 0)"
+        hint="Waiting for your approval"
+        :icon="icons.Sparkles"
+        value-class="text-primary"
+      />
+      <AppStatCard
+        label="In course pool"
+        :value="formatNumber(summary?.approved ?? 0)"
+        hint="Used by path generation"
+        :icon="icons.ThumbsUp"
+        value-class="text-success"
+      />
+      <AppStatCard
+        label="Rejected"
+        :value="formatNumber(summary?.rejected ?? 0)"
+        hint="Below the quality bar"
+        :icon="icons.XCircle"
+      />
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative">
+        <Search class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          v-model="searchQuery"
+          placeholder="Search title…"
+          aria-label="Search courses in review"
+          class="h-8 w-72 pl-8"
+          @keyup.enter="applyFilters"
+        />
+      </div>
+
+      <AppFilterSelect v-model="statusFilter" label="Status" :options="statusOptions" />
+      <AppFilterSelect v-model="careerFilter" label="Career" :options="careerOptions" />
+      <AppFilterSelect v-model="minScoreFilter" label="Min score" :options="scoreOptions" width-class="min-w-36" />
+
+      <Button size="sm" class="ml-auto" @click="applyFilters">Apply</Button>
+    </div>
+
+    <AppDataCard
+      :title="statusLabel"
+      :meta="data ? `${formatNumber(data.pageInfo.total)} courses` : 'Loading…'"
+    >
+      <template #actions>
+        <span v-if="selectedIds.length" class="text-xs text-muted-foreground tabular-nums">
+          {{ selectedIds.length }} selected
+        </span>
+        <Button variant="outline" size="sm" :disabled="!selectedIds.length || submitting" @click="reject">
+          Reject
+        </Button>
+        <Button size="sm" :disabled="!selectedIds.length || submitting" @click="approve">
+          <Loader2 v-if="submitting" class="animate-spin" />
+          Add to course pool
+        </Button>
+      </template>
+
+      <Table>
+        <TableHeader>
+          <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead class="w-10">
+              <Checkbox
+                :model-value="selectAllState"
+                aria-label="Select all on page"
+                @update:model-value="toggleAll"
+              />
+            </TableHead>
+            <TableHead>Course</TableHead>
+            <TableHead>Career / level</TableHead>
+            <TableHead>Score</TableHead>
+            <TableHead>Assessment</TableHead>
+            <TableHead>Added</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody v-if="pending">
+          <TableRow v-for="n in 8" :key="n" class="hover:bg-transparent">
+            <TableCell colspan="6"><Skeleton class="h-4 w-full" /></TableCell>
+          </TableRow>
+        </TableBody>
+
+        <TableBody v-else-if="rows.length">
+          <TableRow
+            v-for="course in rows"
+            :key="course._id"
+            :data-state="isSelected(course._id) ? 'selected' : undefined"
+          >
+            <TableCell class="align-top">
+              <Checkbox
+                :model-value="isSelected(course._id)"
+                :aria-label="`Select ${course.title}`"
+                @update:model-value="toggleOne(course._id)"
+              />
+            </TableCell>
+            <TableCell class="max-w-[24rem] align-top">
+              <a
+                :href="course.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block truncate font-medium hover:text-primary hover:underline"
+              >
+                {{ course.title }}
+              </a>
+              <div class="truncate text-xs text-muted-foreground">
+                {{ course.institution || 'Unknown channel' }}
+                <span v-if="course.duration"> · {{ course.duration }}</span>
+                <span v-if="course.meta?.viewCount"> · {{ formatNumber(course.meta.viewCount) }} views</span>
+              </div>
+            </TableCell>
+            <TableCell class="align-top">
+              <div class="text-sm">{{ course.category || '—' }}</div>
+              <Badge v-if="course.level" variant="muted" class="mt-1 capitalize">{{ course.level }}</Badge>
+            </TableCell>
+            <TableCell class="align-top">
+              <Badge
+                v-if="course.qualityReview"
+                :variant="scoreVariant(course.qualityReview.score)"
+                class="text-sm font-semibold tabular-nums"
+              >
+                {{ course.qualityReview.score }}
+              </Badge>
+              <span v-else class="text-muted-foreground/50">—</span>
+              <div v-if="course.qualityReview" class="mt-1 text-xs capitalize text-muted-foreground">
+                {{ course.qualityReview.verdict }}
+              </div>
+            </TableCell>
+            <TableCell class="min-w-[20rem] max-w-[28rem] whitespace-normal align-top">
+              <p v-if="course.qualityReview?.summary" class="line-clamp-3 text-xs text-muted-foreground">
+                {{ course.qualityReview.summary }}
+              </p>
+              <ul v-if="course.qualityReview?.concerns?.length" class="mt-1 space-y-0.5">
+                <li
+                  v-for="concern in course.qualityReview.concerns.slice(0, 2)"
+                  :key="concern"
+                  class="line-clamp-1 text-xs text-warning"
+                  :title="concern"
+                >
+                  · {{ concern }}
+                </li>
+              </ul>
+            </TableCell>
+            <TableCell class="align-top text-xs text-muted-foreground tabular-nums">
+              {{ formatDate(course.createdAt) }}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+
+        <TableBody v-else>
+          <TableRow class="hover:bg-transparent">
+            <TableCell colspan="6" class="p-0">
+              <AppEmptyState
+                title="Nothing here yet"
+                description="Ingested courses are scored automatically. Winners show up here for approval."
+                :icon="icons.Sparkles"
+              />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      <template v-if="data && data.pageInfo.totalPages > 1" #footer>
+        <AppPagination
+          :current-page="currentPage"
+          :total-pages="data.pageInfo.totalPages"
+          @update:page="goToPage"
+        />
+      </template>
+    </AppDataCard>
+
+    <AppErrorState
+      v-if="error && !pending"
+      title="Failed to load review queue"
+      :message="error.message"
+      @retry="refreshAll"
+    />
+  </AppPage>
+</template>

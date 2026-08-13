@@ -1,37 +1,50 @@
-<template>
-  <div class="card bg-base-100 shadow">
-    <div class="card-body">
-      <h3 class="card-title text-lg">Score Distribution</h3>
-      <div class="flex gap-4 items-end h-40">
-        <div v-for="(count, label) in buckets" :key="label" class="flex flex-col items-center flex-1">
-          <span class="text-sm font-bold mb-1">{{ count }}</span>
-          <div
-            class="w-full rounded-t"
-            :class="bucketColor(label)"
-            :style="{ height: barHeight(count) + 'px' }"
-          />
-          <span class="text-xs mt-1 opacity-70">{{ label }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 const props = defineProps<{ buckets: Record<string, number> }>();
 
-function bucketColor(label: string): string {
-  switch (label) {
-    case '90-100': return 'bg-success';
-    case '70-89': return 'bg-info';
-    case '50-69': return 'bg-warning';
-    case '0-49': return 'bg-error';
-    default: return 'bg-base-300';
-  }
-}
+const BAR_COLORS: Record<string, string> = {
+  '90-100': 'bg-chart-4',
+  '70-89': 'bg-chart-2',
+  '50-69': 'bg-chart-3',
+  '0-49': 'bg-chart-5',
+};
 
-function barHeight(count: number): number {
-  const max = Math.max(...Object.values(props.buckets), 1);
-  return Math.max(4, (count / max) * 120);
-}
+const bars = computed(() => {
+  const entries = Object.entries(props.buckets ?? {});
+  const max = Math.max(...entries.map(([, count]) => count), 1);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+
+  return entries.map(([label, count]) => ({
+    label,
+    count,
+    color: BAR_COLORS[label] ?? 'bg-muted-foreground',
+    height: `${Math.max(2, (count / max) * 100)}%`,
+    share: total > 0 ? Math.round((count / total) * 100) : 0,
+  }));
+});
 </script>
+
+<template>
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-base">Score distribution</CardTitle>
+      <CardDescription>Validated paths grouped by score band</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div class="flex h-44 items-end gap-3">
+        <div v-for="bar in bars" :key="bar.label" class="flex h-full flex-1 flex-col items-center gap-2">
+          <span class="text-sm font-semibold tabular-nums">{{ bar.count }}</span>
+          <div class="flex w-full flex-1 items-end">
+            <div
+              :class="['w-full rounded-md transition-[height] duration-500 ease-out', bar.color]"
+              :style="{ height: bar.height }"
+            />
+          </div>
+          <div class="text-center">
+            <div class="text-xs font-medium tabular-nums">{{ bar.label }}</div>
+            <div class="text-xs text-muted-foreground tabular-nums">{{ bar.share }}%</div>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</template>

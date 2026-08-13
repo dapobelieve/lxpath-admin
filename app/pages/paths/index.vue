@@ -1,132 +1,12 @@
-<template>
-  <div class="flex flex-col h-full">
-    <LayoutHeader :title="pageTitle" @refresh="refresh" />
-
-    <div class="p-6 space-y-4 overflow-auto">
-      <div v-if="userFilter" class="card bg-base-200 shadow-sm">
-        <div class="card-body py-3 px-4 flex-row items-center gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          <span class="font-medium">Filtered by user:</span>
-          <NuxtLink v-if="userData" :to="`/users/${userFilter}`" class="link link-primary font-semibold">{{ userName }}</NuxtLink>
-          <span v-else class="opacity-60">{{ userFilter }}</span>
-          <NuxtLink to="/paths" class="btn btn-xs btn-ghost ml-auto">Clear filter</NuxtLink>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap gap-3 items-center">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search paths..."
-          class="input input-bordered input-sm w-64"
-          @keyup.enter="applyFilters"
-        />
-        <select v-model="statusFilter" class="select select-bordered select-sm" @change="applyFilters">
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="generating">Generating</option>
-          <option value="paused">Paused</option>
-          <option value="failed">Failed</option>
-        </select>
-        <select v-model="validFilter" class="select select-bordered select-sm" @change="applyFilters">
-          <option value="">All</option>
-          <option value="true">Valid Only</option>
-          <option value="false">With Issues</option>
-        </select>
-        <button class="btn btn-sm btn-primary" @click="applyFilters">Filter</button>
-      </div>
-
-      <div v-if="pending" class="flex justify-center py-12">
-        <span class="loading loading-spinner loading-lg" />
-      </div>
-
-      <template v-else-if="data">
-        <div class="overflow-x-auto">
-          <table class="table table-zebra">
-            <thead>
-              <tr>
-                <th>Path Name</th>
-                <th v-if="!userFilter">User</th>
-                <th>Career</th>
-                <th>Status</th>
-                <th>Courses</th>
-                <th>Score</th>
-                <th>Valid</th>
-                <th>Strengths</th>
-                <th>Flags</th>
-                <th>Validated</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="path in data.data" :key="path._id">
-                <td class="max-w-xs truncate font-medium">{{ path.pathName }}</td>
-                <td v-if="!userFilter">
-                  <NuxtLink v-if="path.userId" :to="`/users/${path.userId}`" class="link link-hover text-sm">
-                    {{ path.userName || path.userEmail || path.userId }}
-                  </NuxtLink>
-                  <span v-else class="opacity-40">—</span>
-                </td>
-                <td class="max-w-xs truncate">{{ path.selectedCareer || '—' }}</td>
-                <td><span class="badge badge-sm" :class="statusBadge(path.status)">{{ path.status }}</span></td>
-                <td>{{ path.totalCourses }}</td>
-                <td>
-                  <span v-if="path.validationResult" :class="scoreColor(path.validationResult.score)" class="font-bold">
-                    {{ path.validationResult.score }}
-                  </span>
-                  <span v-else class="opacity-40">—</span>
-                </td>
-                <td>
-                  <span v-if="path.validationResult" class="badge badge-sm" :class="path.validationResult.isValid ? 'badge-success' : 'badge-error'">
-                    {{ path.validationResult.isValid ? 'Yes' : 'No' }}
-                  </span>
-                  <span v-else class="opacity-40">—</span>
-                </td>
-                <td>
-                  <span v-if="path.validationResult?.highlights?.length" class="text-success font-medium">
-                    {{ path.validationResult.highlights.length }}
-                  </span>
-                  <span v-else class="opacity-40">—</span>
-                </td>
-                <td>
-                  <span v-if="path.validationResult">{{ path.validationResult.flags.length }}</span>
-                  <span v-else class="opacity-40">—</span>
-                </td>
-                <td class="text-xs opacity-70">{{ path.validationResult ? formatDate(path.validationResult.validatedAt) : '—' }}</td>
-                <td>
-                  <NuxtLink :to="`/paths/${path._id}`" class="btn btn-xs btn-ghost">View</NuxtLink>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <LayoutPagination
-          :current-page="currentPage"
-          :total-pages="data.pageInfo.totalPages"
-          @update:page="goToPage"
-        />
-      </template>
-
-      <div v-else-if="error" class="alert alert-error">
-        <span>Failed to load paths: {{ error.message }}</span>
-        <button class="btn btn-sm" @click="refresh">Retry</button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
+import { Search, User, X } from '@lucide/vue';
 import type { UserDetail } from '~/types';
-import { statusBadge, scoreColor, formatDate } from '~/utils/formatters';
+import { formatDate, formatNumber, scoreColor } from '~/utils/formatters';
 
 const route = useRoute();
-const router = useRouter();
-
 const { getValidationPaths, getUserDetail } = useAdminApi();
+
+const icons = { User };
 
 const currentPage = ref(1);
 const searchQuery = ref('');
@@ -135,19 +15,24 @@ const validFilter = ref('');
 const userFilter = ref((route.query.userId as string) || '');
 const userData = ref<UserDetail | null>(null);
 
+const statusOptions = [
+  { label: 'All statuses', value: '' },
+  { label: 'Active', value: 'active' },
+  { label: 'Completed', value: 'completed' },
+  { label: 'Generating', value: 'generating' },
+  { label: 'Paused', value: 'paused' },
+  { label: 'Failed', value: 'failed' },
+];
+
+const validOptions = [
+  { label: 'All', value: '' },
+  { label: 'Valid only', value: 'true' },
+  { label: 'With issues', value: 'false' },
+];
+
 if (userFilter.value) {
-  getUserDetail(userFilter.value).then((result) => {
-    if (result) userData.value = result.user;
-  });
+  loadUser(userFilter.value);
 }
-
-const pageTitle = computed(() => userFilter.value ? 'User Paths' : 'Learning Paths');
-
-const userName = computed(() => {
-  if (!userData.value) return '';
-  const u = userData.value;
-  return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
-});
 
 const { data, pending, error, refresh } = useAsyncData(
   'validation-paths',
@@ -163,6 +48,26 @@ const { data, pending, error, refresh } = useAsyncData(
   { default: () => null, watch: [currentPage] },
 );
 
+const pageTitle = computed(() => (userFilter.value ? 'User paths' : 'Learning paths'));
+
+const userName = computed(() => {
+  if (!userData.value) return '';
+  const user = userData.value;
+  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
+});
+
+const rows = computed(() => data.value?.data ?? []);
+
+const totalLabel = computed(() =>
+  data.value ? `${formatNumber(data.value.pageInfo.total)} paths` : 'Loading…',
+);
+
+function loadUser(userId: string) {
+  getUserDetail(userId).then((result) => {
+    userData.value = result?.user ?? null;
+  });
+}
+
 function applyFilters() {
   currentPage.value = 1;
   refresh();
@@ -172,16 +77,183 @@ function goToPage(page: number) {
   currentPage.value = page;
 }
 
-watch(() => route.query.userId, (newUserId) => {
-  userFilter.value = (newUserId as string) || '';
-  if (userFilter.value) {
-    getUserDetail(userFilter.value).then((result) => {
-      if (result) userData.value = result.user;
-    });
-  } else {
-    userData.value = null;
-  }
-  currentPage.value = 1;
-  refresh();
-});
+watch([statusFilter, validFilter], applyFilters);
+
+watch(
+  () => route.query.userId,
+  (newUserId) => {
+    userFilter.value = (newUserId as string) || '';
+    if (userFilter.value) loadUser(userFilter.value);
+    else userData.value = null;
+    applyFilters();
+  },
+);
 </script>
+
+<template>
+  <AppPage
+    :title="pageTitle"
+    description="Every generated path with its validation outcome"
+    :refreshing="pending"
+    @refresh="refresh"
+  >
+    <Card v-if="userFilter" class="gap-0 border-primary/30 bg-primary/5 py-0">
+      <div class="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+        <component :is="icons.User" class="size-4 text-primary" />
+        <span class="text-muted-foreground">Filtered by user</span>
+        <NuxtLink
+          v-if="userData"
+          :to="`/users/${userFilter}`"
+          class="font-medium hover:text-primary hover:underline"
+        >
+          {{ userName }}
+        </NuxtLink>
+        <span v-else class="font-mono text-xs text-muted-foreground">{{ userFilter }}</span>
+        <Button as-child variant="ghost" size="sm" class="ml-auto">
+          <NuxtLink to="/paths">
+            <X />
+            Clear filter
+          </NuxtLink>
+        </Button>
+      </div>
+    </Card>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative">
+        <Search class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          v-model="searchQuery"
+          placeholder="Search paths…"
+          aria-label="Search paths"
+          class="h-8 w-64 pl-8"
+          @keyup.enter="applyFilters"
+        />
+      </div>
+
+      <AppFilterSelect v-model="statusFilter" label="Status" :options="statusOptions" />
+      <AppFilterSelect v-model="validFilter" label="Validation" :options="validOptions" width-class="min-w-36" />
+
+      <Button size="sm" class="ml-auto" @click="applyFilters">Apply</Button>
+    </div>
+
+    <AppDataCard title="Paths" :meta="totalLabel">
+      <Table>
+        <TableHeader>
+          <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead>Path</TableHead>
+            <TableHead v-if="!userFilter">User</TableHead>
+            <TableHead>Career</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead class="text-right">Courses</TableHead>
+            <TableHead>Score</TableHead>
+            <TableHead>Valid</TableHead>
+            <TableHead class="text-right">Strengths</TableHead>
+            <TableHead class="text-right">Flags</TableHead>
+            <TableHead>Validated</TableHead>
+            <TableHead class="w-16" />
+          </TableRow>
+        </TableHeader>
+
+        <TableBody v-if="pending">
+          <TableRow v-for="n in 8" :key="n">
+            <TableCell :colspan="userFilter ? 10 : 11">
+              <Skeleton class="h-4 w-full" />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+
+        <TableBody v-else-if="rows.length">
+          <TableRow v-for="path in rows" :key="path._id">
+            <TableCell class="max-w-[20rem]">
+              <NuxtLink
+                :to="`/paths/${path._id}`"
+                class="block truncate font-medium hover:text-primary hover:underline"
+              >
+                {{ path.pathName }}
+              </NuxtLink>
+            </TableCell>
+            <TableCell v-if="!userFilter" class="max-w-[12rem]">
+              <NuxtLink
+                v-if="path.userId"
+                :to="`/users/${path.userId}`"
+                class="block truncate text-muted-foreground hover:text-primary hover:underline"
+              >
+                {{ path.userName || path.userEmail || path.userId }}
+              </NuxtLink>
+              <span v-else class="text-muted-foreground/50">—</span>
+            </TableCell>
+            <TableCell class="max-w-[14rem] truncate text-muted-foreground">
+              {{ path.selectedCareer || '—' }}
+            </TableCell>
+            <TableCell>
+              <AppStatusBadge :status="path.status" />
+            </TableCell>
+            <TableCell class="text-right tabular-nums">{{ path.totalCourses }}</TableCell>
+            <TableCell>
+              <span
+                v-if="path.validationResult"
+                :class="['font-semibold tabular-nums', scoreColor(path.validationResult.score)]"
+              >
+                {{ path.validationResult.score }}
+              </span>
+              <span v-else class="text-muted-foreground/50">—</span>
+            </TableCell>
+            <TableCell>
+              <Badge
+                v-if="path.validationResult"
+                :variant="path.validationResult.isValid ? 'success' : 'destructive'"
+              >
+                {{ path.validationResult.isValid ? 'Valid' : 'Issues' }}
+              </Badge>
+              <span v-else class="text-muted-foreground/50">—</span>
+            </TableCell>
+            <TableCell class="text-right tabular-nums">
+              <span v-if="path.validationResult?.highlights?.length" class="font-medium text-success">
+                {{ path.validationResult.highlights.length }}
+              </span>
+              <span v-else class="text-muted-foreground/50">—</span>
+            </TableCell>
+            <TableCell class="text-right tabular-nums">
+              <span v-if="path.validationResult">{{ path.validationResult.flags.length }}</span>
+              <span v-else class="text-muted-foreground/50">—</span>
+            </TableCell>
+            <TableCell class="text-xs text-muted-foreground tabular-nums">
+              {{ path.validationResult ? formatDate(path.validationResult.validatedAt) : '—' }}
+            </TableCell>
+            <TableCell class="text-right">
+              <Button as-child variant="ghost" size="sm">
+                <NuxtLink :to="`/paths/${path._id}`">View</NuxtLink>
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+
+        <TableBody v-else>
+          <TableRow class="hover:bg-transparent">
+            <TableCell :colspan="userFilter ? 10 : 11" class="p-0">
+              <AppEmptyState
+                title="No paths found"
+                description="No learning paths match the current filters."
+              />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      <template v-if="data && data.pageInfo.totalPages > 1" #footer>
+        <AppPagination
+          :current-page="currentPage"
+          :total-pages="data.pageInfo.totalPages"
+          @update:page="goToPage"
+        />
+      </template>
+    </AppDataCard>
+
+    <AppErrorState
+      v-if="error && !pending"
+      title="Failed to load paths"
+      :message="error.message"
+      @retry="refresh"
+    />
+  </AppPage>
+</template>
