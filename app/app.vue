@@ -1,8 +1,6 @@
 <template>
-  <div class="flex min-h-screen bg-base-100" data-theme="light">
-    <LayoutSidebar />
-    <main class="flex-1 flex flex-col">
-      <NuxtPage />
-    </main>
-  </div>
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
+  <Toaster position="bottom-right" rich-colors />
 </template>

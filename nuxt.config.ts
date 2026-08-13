@@ -1,3 +1,5 @@
+import tailwindcss from '@tailwindcss/vite';
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -6,7 +8,24 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
-  modules: ['@nuxtjs/tailwindcss', '@vueuse/nuxt'],
+  modules: ['@vueuse/nuxt', 'shadcn-nuxt', '@nuxtjs/color-mode'],
+
+  css: ['~/assets/css/tailwind.css'],
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
+
+  shadcn: {
+    prefix: '',
+    componentDir: '~/components/ui',
+  },
+
+  colorMode: {
+    classSuffix: '',
+    preference: 'light',
+    fallback: 'light',
+  },
 
   runtimeConfig: {
     public: {

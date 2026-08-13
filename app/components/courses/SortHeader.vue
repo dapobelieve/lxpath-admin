@@ -1,32 +1,6 @@
-<template>
-  <th
-    scope="col"
-    class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-base-content/50"
-    :aria-sort="ariaSort"
-  >
-    <button
-      type="button"
-      class="group inline-flex items-center gap-1 rounded transition-colors hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-100"
-      :class="isActive ? 'text-base-content' : ''"
-      @click="emit('sort', field)"
-    >
-      {{ label }}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-3.5 w-3.5 transition-opacity"
-        :class="isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path v-if="isAscending" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-      </svg>
-    </button>
-  </th>
-</template>
-
 <script setup lang="ts">
+import { ChevronDown, ChevronUp, ChevronsUpDown } from '@lucide/vue';
+
 const props = defineProps<{
   sort: { field: string; order: 'asc' | 'desc' };
   field: string;
@@ -41,4 +15,27 @@ const ariaSort = computed(() => {
   if (!isActive.value) return 'none';
   return props.sort.order === 'asc' ? 'ascending' : 'descending';
 });
+const icon = computed(() => {
+  if (!isActive.value) return ChevronsUpDown;
+  return isAscending.value ? ChevronUp : ChevronDown;
+});
 </script>
+
+<template>
+  <TableHead :aria-sort="ariaSort">
+    <button
+      type="button"
+      :class="[
+        'group inline-flex items-center gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isActive ? 'text-foreground' : '',
+      ]"
+      @click="emit('sort', field)"
+    >
+      {{ label }}
+      <component
+        :is="icon"
+        :class="['size-3 transition-opacity', isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50']"
+      />
+    </button>
+  </TableHead>
+</template>

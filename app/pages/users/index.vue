@@ -1,119 +1,13 @@
-<template>
-  <div class="flex flex-col h-full">
-    <LayoutHeader title="Recent Users" @refresh="refresh" />
-
-    <div class="p-6 space-y-6 overflow-auto">
-      <div v-if="pending" class="flex justify-center py-12">
-        <span class="loading loading-spinner loading-lg" />
-      </div>
-
-      <template v-else-if="data">
-        <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
-          <div class="stat">
-            <div class="stat-figure text-primary">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <div class="stat-title">Total Users</div>
-            <div class="stat-value text-primary">{{ data.totalUsers }}</div>
-            <div class="stat-desc">{{ data.learnerCount }} learners</div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-figure text-success">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-            </div>
-            <div class="stat-title">New Today</div>
-            <div class="stat-value text-success">{{ data.signedUpToday }}</div>
-            <div class="stat-desc">Signed up today</div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-figure text-info">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div class="stat-title">Active This Week</div>
-            <div class="stat-value text-info">{{ data.activeThisWeek }}</div>
-            <div class="stat-desc">Logged in last 7 days</div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow">
-          <div class="card-body">
-            <div class="flex items-center justify-between gap-4">
-              <h3 class="card-title text-lg">All Users ({{ data.users.length }})</h3>
-              <button class="btn btn-sm btn-outline" :disabled="exporting" @click="exportUsersCsv">
-                <span v-if="exporting" class="loading loading-spinner loading-xs" />
-                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export CSV
-              </button>
-            </div>
-            <p v-if="exportError" class="text-error text-sm">{{ exportError }}</p>
-            <div class="overflow-x-auto">
-              <table class="table table-zebra">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Type</th>
-                    <th>Verified</th>
-                    <th>Paths</th>
-                    <th>Joined</th>
-                    <th>Last Login</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="user in data.users" :key="user._id">
-                    <td>
-                      <NuxtLink :to="`/users/${user._id}`" class="font-medium link link-hover">{{ userName(user) }}</NuxtLink>
-                    </td>
-                    <td class="text-sm">{{ user.email }}</td>
-                    <td>
-                      <span class="badge badge-sm" :class="user.isLearner ? 'badge-primary' : 'badge-ghost'">
-                        {{ user.isLearner ? 'Learner' : 'User' }}
-                      </span>
-                    </td>
-                    <td>
-                      <span v-if="user.otpVerification" class="text-success text-sm">&#10003;</span>
-                      <span v-else class="text-error text-sm">&#10007;</span>
-                    </td>
-                    <td>
-                      <NuxtLink v-if="user.pathCount > 0" :to="`/paths?userId=${user._id}`" class="badge badge-sm badge-primary link">
-                        {{ user.pathCount }}
-                      </NuxtLink>
-                      <span v-else class="opacity-40">0</span>
-                    </td>
-                    <td class="text-sm opacity-70">{{ formatDate(user.createdAt) }}</td>
-                    <td class="text-sm opacity-70">{{ user.lastLoginAt ? formatDateTime(user.lastLoginAt) : 'Never' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <div v-else-if="error" class="alert alert-error">
-        <span>Failed to load users: {{ error.message }}</span>
-        <button class="btn btn-sm" @click="refresh">Retry</button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
+import { CircleCheck, CircleX, Clock, Download, UserPlus, Users } from '@lucide/vue';
+import { toast } from 'vue-sonner';
 import type { RecentUser } from '~/types';
-import { formatDate, formatDateTime } from '~/utils/formatters';
+import { formatDate, formatDateTime, formatNumber, initials } from '~/utils/formatters';
 import { downloadCsv } from '~/utils/csv';
 
 const { getRecentUsers, getUsersExport } = useAdminApi();
+
+const icons = { Users, UserPlus, Clock };
 
 const { data, pending, error, refresh } = useAsyncData(
   'recent-users',
@@ -122,18 +16,16 @@ const { data, pending, error, refresh } = useAsyncData(
 );
 
 const exporting = ref(false);
-const exportError = ref('');
 
 function userName(user: RecentUser): string {
   if (user.firstName || user.lastName) {
     return [user.firstName, user.lastName].filter(Boolean).join(' ');
   }
-  return user.email.split('@')[0];
+  return user.email.split('@')[0] ?? user.email;
 }
 
 async function exportUsersCsv() {
   exporting.value = true;
-  exportError.value = '';
 
   try {
     const users = await getUsersExport();
@@ -155,10 +47,133 @@ async function exportUsersCsv() {
       ['Name', 'Email', 'Phone', 'Type', 'Verified', 'Paths', 'Joined', 'Last Login'],
       rows,
     );
+    toast.success(`Exported ${formatNumber(users.length)} users`);
   } catch {
-    exportError.value = 'Export failed. Please try again.';
+    toast.error('Export failed. Please try again.');
   } finally {
     exporting.value = false;
   }
 }
 </script>
+
+<template>
+  <AppPage
+    title="Users"
+    description="Who is signing up and generating paths"
+    :refreshing="pending"
+    @refresh="refresh"
+  >
+    <template #actions>
+      <Button variant="outline" size="sm" :disabled="exporting" @click="exportUsersCsv">
+        <Download />
+        <span class="hidden sm:inline">{{ exporting ? 'Exporting…' : 'Export CSV' }}</span>
+      </Button>
+    </template>
+
+    <div class="grid gap-4 sm:grid-cols-3">
+      <AppStatCard
+        label="Total users"
+        :value="data ? formatNumber(data.totalUsers) : 0"
+        :hint="data ? `${formatNumber(data.learnerCount)} learners` : ''"
+        :icon="icons.Users"
+        :loading="pending && !data"
+      />
+      <AppStatCard
+        label="New today"
+        :value="data ? formatNumber(data.signedUpToday) : 0"
+        hint="Signed up in the last 24h"
+        :icon="icons.UserPlus"
+        value-class="text-success"
+        :loading="pending && !data"
+      />
+      <AppStatCard
+        label="Active this week"
+        :value="data ? formatNumber(data.activeThisWeek) : 0"
+        hint="Logged in over the last 7 days"
+        :icon="icons.Clock"
+        value-class="text-info"
+        :loading="pending && !data"
+      />
+    </div>
+
+    <AppDataCard title="All users" :meta="data ? `${formatNumber(data.users.length)} shown` : 'Loading…'">
+      <Table>
+        <TableHeader>
+          <TableRow class="bg-muted/40 hover:bg-muted/40">
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Verified</TableHead>
+            <TableHead class="text-right">Paths</TableHead>
+            <TableHead>Joined</TableHead>
+            <TableHead>Last login</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody v-if="pending && !data">
+          <TableRow v-for="n in 8" :key="n" class="hover:bg-transparent">
+            <TableCell colspan="7"><Skeleton class="h-4 w-full" /></TableCell>
+          </TableRow>
+        </TableBody>
+
+        <TableBody v-else-if="data?.users.length">
+          <TableRow v-for="user in data.users" :key="user._id">
+            <TableCell>
+              <NuxtLink :to="`/users/${user._id}`" class="flex items-center gap-2.5 group">
+                <Avatar class="size-7">
+                  <AvatarFallback class="text-[0.65rem] font-medium">
+                    {{ initials(userName(user)) }}
+                  </AvatarFallback>
+                </Avatar>
+                <span class="font-medium group-hover:text-primary group-hover:underline">
+                  {{ userName(user) }}
+                </span>
+              </NuxtLink>
+            </TableCell>
+            <TableCell class="text-muted-foreground">{{ user.email }}</TableCell>
+            <TableCell>
+              <Badge :variant="user.isLearner ? 'accent' : 'muted'">
+                {{ user.isLearner ? 'Learner' : 'User' }}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <CircleCheck v-if="user.otpVerification" class="size-4 text-success" />
+              <CircleX v-else class="size-4 text-muted-foreground/50" />
+            </TableCell>
+            <TableCell class="text-right">
+              <NuxtLink
+                v-if="user.pathCount > 0"
+                :to="`/paths?userId=${user._id}`"
+                class="tabular-nums font-medium hover:text-primary hover:underline"
+              >
+                {{ user.pathCount }}
+              </NuxtLink>
+              <span v-else class="text-muted-foreground/50 tabular-nums">0</span>
+            </TableCell>
+            <TableCell class="text-xs text-muted-foreground tabular-nums">
+              {{ formatDate(user.createdAt) }}
+            </TableCell>
+            <TableCell class="text-xs text-muted-foreground tabular-nums">
+              {{ user.lastLoginAt ? formatDateTime(user.lastLoginAt) : 'Never' }}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+
+        <TableBody v-else>
+          <TableRow class="hover:bg-transparent">
+            <TableCell colspan="7" class="p-0">
+              <AppEmptyState title="No users yet" description="Nobody has signed up so far." />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </AppDataCard>
+
+    <AppErrorState
+      v-if="error && !pending"
+      title="Failed to load users"
+      :message="error.message"
+      @retry="refresh"
+    />
+  </AppPage>
+</template>

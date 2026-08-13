@@ -1,45 +1,55 @@
-<template>
-  <div class="card bg-base-100 shadow">
-    <div class="card-body">
-      <h3 class="card-title text-lg">Strength Breakdown</h3>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <h4 class="text-sm font-semibold mb-2 opacity-70">By Category</h4>
-          <div class="space-y-2">
-            <div v-for="(count, cat) in byCategory" :key="cat" class="flex items-center justify-between">
-              <span class="badge badge-sm" :class="highlightCategoryBadge(cat as string)">{{ highlightCategoryLabel(cat as string) }}</span>
-              <span class="font-bold">{{ count }}</span>
-            </div>
-          </div>
-        </div>
-        <div>
-          <h4 class="text-sm font-semibold mb-2 opacity-70">Per Path</h4>
-          <div class="stat p-0">
-            <div class="stat-value text-success">{{ averagePerPath }}</div>
-            <div class="stat-desc">Avg strengths per validated path</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import type { HighlightCategory } from '~/types';
 import { highlightCategoryLabel } from '~/utils/formatters';
 
-defineProps<{
+const props = defineProps<{
   byCategory: Record<HighlightCategory, number>;
   averagePerPath: number;
 }>();
 
-function highlightCategoryBadge(cat: string): string {
-  switch (cat) {
-    case 'career_alignment': return 'badge-success';
-    case 'skill_gap_filled': return 'badge-primary';
-    case 'progression': return 'badge-secondary';
-    case 'value': return 'badge-accent';
-    default: return 'badge-ghost';
-  }
-}
+const CATEGORY_BARS: Record<string, string> = {
+  career_alignment: 'bg-chart-4',
+  skill_gap_filled: 'bg-chart-1',
+  progression: 'bg-chart-2',
+  value: 'bg-chart-3',
+};
+
+const categories = computed(() => {
+  const entries = Object.entries(props.byCategory ?? {});
+  const max = Math.max(...entries.map(([, count]) => count), 1);
+  return entries.map(([key, count]) => ({
+    key,
+    label: highlightCategoryLabel(key),
+    count,
+    color: CATEGORY_BARS[key] ?? 'bg-muted-foreground',
+    width: `${Math.max(2, (count / max) * 100)}%`,
+  }));
+});
 </script>
+
+<template>
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-base">Strength breakdown</CardTitle>
+      <CardDescription>Why the validator rates these paths well</CardDescription>
+    </CardHeader>
+    <CardContent class="grid gap-6 sm:grid-cols-[1fr_auto]">
+      <div class="space-y-3">
+        <div v-for="item in categories" :key="item.key" class="space-y-1.5">
+          <div class="flex items-baseline justify-between gap-2 text-sm">
+            <span>{{ item.label }}</span>
+            <span class="font-semibold tabular-nums">{{ item.count }}</span>
+          </div>
+          <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div :class="['h-full rounded-full', item.color]" :style="{ width: item.width }" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col justify-center rounded-lg border bg-muted/40 px-5 py-4 text-center">
+        <span class="text-3xl font-semibold tabular-nums text-success">{{ averagePerPath }}</span>
+        <span class="mt-1 max-w-28 text-xs text-muted-foreground">Avg strengths per validated path</span>
+      </div>
+    </CardContent>
+  </Card>
+</template>
