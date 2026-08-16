@@ -44,6 +44,21 @@ interface PaginatedRunsResponse {
 export function useAdminApi() {
   const config = useRuntimeConfig();
   const baseUrl = config.public.apiBase;
+  const { token, logout } = useAuth();
+
+  const $fetch = <T>(url: string, options: Record<string, any> = {}): Promise<T> =>
+    globalThis.$fetch<T>(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+      },
+      onResponseError({ response }) {
+        if (response.status === 401 || response.status === 403) {
+          logout();
+        }
+      },
+    });
 
   async function getValidationStats(): Promise<ValidationStats> {
     const response = await $fetch<ApiResponse<{ stats: ValidationStats }>>(

@@ -7,9 +7,17 @@ import {
   ShieldCheck,
   Users,
   SquarePlay,
+  LogOut,
 } from '@lucide/vue';
 
 const route = useRoute();
+const { user, logout } = useAuth();
+
+const initials = computed(() => {
+  const name = [user.value?.firstName, user.value?.lastName].filter(Boolean).join(' ');
+  const source = name || user.value?.email || '';
+  return source.slice(0, 2).toUpperCase();
+});
 
 const groups = [
   {
@@ -74,8 +82,27 @@ function isActive(to: string): boolean {
       </SidebarGroup>
     </SidebarContent>
 
-    <SidebarFooter class="border-t">
+    <SidebarFooter class="border-t gap-2">
+      <div v-if="user" class="flex items-center gap-2 px-1 group-data-[collapsible=icon]:hidden">
+        <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+          {{ initials }}
+        </div>
+        <div class="grid min-w-0 leading-tight">
+          <span class="truncate text-xs font-medium">{{ user.email }}</span>
+          <span class="truncate text-[10px] text-muted-foreground">{{ user.role }}</span>
+        </div>
+      </div>
+
       <AppThemeToggle />
+
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton tooltip="Sign out" @click="logout()">
+            <LogOut />
+            <span>Sign out</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
     </SidebarFooter>
 
     <SidebarRail />
