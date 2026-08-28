@@ -1,4 +1,4 @@
-import type { PaginatedReviewCourses, ReviewCourse, ReviewSummary, CoursePoolStatus, ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload } from '~/types';
+import type { PaginatedReviewCourses, ReviewCourse, ReviewSummary, CoursePoolStatus, ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload, PaginatedTopics, TopicFilters, TopicPayload } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -28,6 +28,14 @@ interface PaginatedReviewResponse {
   data: ReviewCourse[];
   pageInfo: PageInfo;
   filters: { careers: string[] };
+  status: string;
+  message: string;
+  code: number;
+}
+
+interface PaginatedTopicsResponse {
+  data: IngestionQuery[];
+  pageInfo: PageInfo;
   status: string;
   message: string;
   code: number;
@@ -310,11 +318,76 @@ export function useAdminApi() {
     return response.data;
   }
 
-  async function getIngestionQueries(): Promise<IngestionQuery[]> {
-    const response = await $fetch<ApiResponse<{ queries: IngestionQuery[] }>>(
-      `${baseUrl}/api/admin/youtube-ingestion/queries`,
+  async function getIngestionTopics(
+    params: TopicFilters = {},
+  ): Promise<PaginatedTopics> {
+    const query: Record<string, string> = {};
+    if (params.page) query.page = String(params.page);
+    if (params.limit) query.limit = String(params.limit);
+    if (params.search) query.search = params.search;
+    if (params.career) query.career = params.career;
+    if (params.level) query.level = params.level;
+    if (params.enabled !== undefined) query.enabled = String(params.enabled);
+    if (params.neverRun) query.neverRun = 'true';
+
+    const response = await $fetch<PaginatedTopicsResponse>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics`,
+      { params: query },
     );
-    return response.data.queries;
+    return { data: response.data, pageInfo: response.pageInfo };
+  }
+
+  async function getIngestionTopicCareers(): Promise<string[]> {
+    const response = await $fetch<ApiResponse<{ careers: string[] }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics/careers`,
+    );
+    return response.data.careers;
+  }
+
+  async function createIngestionTopic(payload: TopicPayload): Promise<IngestionQuery> {
+    const response = await $fetch<ApiResponse<{ topic: IngestionQuery }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics`,
+      { method: 'POST', body: payload },
+    );
+    return response.data.topic;
+  }
+
+  async function updateIngestionTopic(
+    id: string,
+    payload: Partial<TopicPayload>,
+  ): Promise<IngestionQuery> {
+    const response = await $fetch<ApiResponse<{ topic: IngestionQuery }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics/${id}`,
+      { method: 'PATCH', body: payload },
+    );
+    return response.data.topic;
+  }
+
+  async function deleteIngestionTopic(id: string): Promise<{ deleted: number }> {
+    const response = await $fetch<ApiResponse<{ deleted: number }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics/${id}`,
+      { method: 'DELETE' },
+    );
+    return response.data;
+  }
+
+  async function deleteIngestionTopics(ids: string[]): Promise<{ deleted: number }> {
+    const response = await $fetch<ApiResponse<{ deleted: number }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics/bulk/delete`,
+      { method: 'POST', body: { ids } },
+    );
+    return response.data;
+  }
+
+  async function toggleIngestionTopics(
+    ids: string[],
+    enabled: boolean,
+  ): Promise<{ updated: number; enabled: boolean }> {
+    const response = await $fetch<ApiResponse<{ updated: number; enabled: boolean }>>(
+      `${baseUrl}/api/admin/youtube-ingestion/topics/bulk/toggle`,
+      { method: 'POST', body: { ids, enabled } },
+    );
+    return response.data;
   }
 
   return {
@@ -333,7 +406,13 @@ export function useAdminApi() {
     cancelIngestionRun,
     getIngestionSettings,
     updateIngestionSettings,
-    getIngestionQueries,
+    getIngestionTopics,
+    getIngestionTopicCareers,
+    createIngestionTopic,
+    updateIngestionTopic,
+    deleteIngestionTopic,
+    deleteIngestionTopics,
+    toggleIngestionTopics,
     getReviewCourses,
     getReviewSummary,
     sweepPendingCourses,

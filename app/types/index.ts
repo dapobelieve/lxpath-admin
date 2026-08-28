@@ -351,6 +351,34 @@ export interface IngestionQuery {
   lastVideoId?: string;
   lastError?: string;
   timesRun?: number;
+  isCurated?: boolean;
+}
+
+export type IngestionLevel = 'Beginner' | 'Intermediate' | 'Advanced';
+
+export interface TopicFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  career?: string;
+  level?: IngestionLevel | '';
+  enabled?: boolean;
+  neverRun?: boolean;
+}
+
+export interface PaginatedTopics {
+  data: IngestionQuery[];
+  pageInfo: PageInfo;
+}
+
+export interface TopicPayload {
+  career: string;
+  careerRelevance?: string;
+  level: IngestionLevel;
+  query: string;
+  suitableFor?: string;
+  order?: number;
+  enabled?: boolean;
 }
 
 export interface PaginatedRuns {
@@ -359,6 +387,8 @@ export interface PaginatedRuns {
 }
 
 export interface TriggerRunPayload {
-  customQueries: string[];
-  level?: 'Beginner' | 'Intermediate' | 'Advanced';
+  customQueries?: string[];
+  topicIds?: string[];
+  level?: IngestionLevel;
+  levels?: IngestionLevel[];
 }

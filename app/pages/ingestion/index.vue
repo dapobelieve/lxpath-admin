@@ -20,7 +20,6 @@ const cancelling = ref(false);
 const togglingEnabled = ref(false);
 const runNowOpen = ref(false);
 const cancelOpen = ref(false);
-const queriesOpen = ref(false);
 const statusFilter = ref('');
 const triggerFilter = ref('');
 
@@ -237,9 +236,9 @@ function refreshAll() {
         :icon="icons.SquarePlay"
       >
         <template #hint>
-          <button type="button" class="hover:text-primary hover:underline" @click="queriesOpen = true">
-            View coverage
-          </button>
+          <NuxtLink to="/ingestion/topics" class="hover:text-primary hover:underline">
+            Manage topics
+          </NuxtLink>
           <span v-if="stats?.queriesNeverRun" class="text-warning">
             · {{ stats.queriesNeverRun }} never run
           </span>
@@ -425,6 +424,5 @@ function refreshAll() {
       @close="cancelOpen = false"
     />
 
-    <IngestionQueriesDialog :open="queriesOpen" @close="queriesOpen = false" />
   </AppPage>
 </template>

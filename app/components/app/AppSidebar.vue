@@ -3,6 +3,7 @@ import {
   BookOpen,
   ChartPie,
   ListChecks,
+  ListTree,
   Route,
   ShieldCheck,
   Users,
@@ -38,6 +39,7 @@ const groups = [
     label: 'Ingestion',
     items: [
       { title: 'YouTube Runs', to: '/ingestion', icon: SquarePlay },
+      { title: 'Topics', to: '/ingestion/topics', icon: ListTree },
       { title: 'Course Review', to: '/ingestion/review', icon: ListChecks },
     ],
   },
