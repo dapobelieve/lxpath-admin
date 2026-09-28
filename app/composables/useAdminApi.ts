@@ -1,4 +1,4 @@
-import type { PaginatedReviewCourses, ReviewCourse, ReviewSummary, CoursePoolStatus, ValidationStats, PaginatedPaths, PathDetail, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload, PaginatedTopics, TopicFilters, TopicPayload } from '~/types';
+import type { PaginatedReviewCourses, ReviewCourse, ReviewSummary, CoursePoolStatus, ValidationStats, PaginatedPaths, PathDetail, PathCvSignedUrl, RecentUser, RecentUsersData, UserDetailData, ValidationPathSummary, PageInfo, PaginatedCourses, CourseSummary, CourseFilters, CourseDetail, IngestionStats, IngestionRunSummary, IngestionRunDetail, IngestionQuery, IngestionSettings, PaginatedRuns, TriggerRunPayload, PaginatedTopics, TopicFilters, TopicPayload } from '~/types';
 
 interface ApiResponse<T> {
   data: T;
@@ -111,6 +111,19 @@ export function useAdminApi() {
         `${baseUrl}/api/admin/validation/paths/${pathId}`,
       );
       return response.data.path;
+    } catch {
+      return null;
+    }
+  }
+
+  async function getValidationPathCvUrl(
+    pathId: string,
+  ): Promise<PathCvSignedUrl | null> {
+    try {
+      const response = await $fetch<ApiResponse<{ cv: PathCvSignedUrl | null }>>(
+        `${baseUrl}/api/admin/validation/paths/${pathId}/cv-url`,
+      );
+      return response.data.cv;
     } catch {
       return null;
     }
@@ -394,6 +407,7 @@ export function useAdminApi() {
     getValidationStats,
     getValidationPaths,
     getValidationPathDetail,
+    getValidationPathCvUrl,
     getRecentUsers,
     getUsersExport,
     getUserDetail,

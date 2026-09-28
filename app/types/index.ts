@@ -100,14 +100,65 @@ export interface PaginatedPaths {
   pageInfo: PageInfo;
 }
 
+export interface CareerPathBreakdownLevel {
+  skills?: string[];
+  topics?: string[];
+  description?: string;
+}
+
+export interface CareerPathBreakdown {
+  career?: string;
+  skill?: string;
+  levels?: Record<'beginner' | 'intermediate' | 'advanced', CareerPathBreakdownLevel>;
+  generatedAt?: string;
+}
+
+export interface PathLxNote {
+  lxNoteId: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  title: string;
+  content: string;
+  skillsCovered: string[];
+  keyTopics?: string[];
+  estimatedReadTime?: string;
+  status?: string;
+  progress?: number;
+  generatedAt?: string;
+}
+
+export interface PathCvExtractedSkill {
+  name: string;
+  category?: string | null;
+  proficiency?: string | null;
+  isConfirmed?: boolean | null;
+}
+
+export interface PathCv {
+  hasFile: boolean;
+  fileName?: string | null;
+  contentType?: string | null;
+  skippedCV: boolean;
+  processingState?: string | null;
+  extractedSkills: PathCvExtractedSkill[];
+  analysis?: string | null;
+  totalYearsExperience?: number | null;
+}
+
+export interface PathCvSignedUrl {
+  url: string;
+  fileName: string;
+  contentType: string;
+  expiresInSeconds: number;
+}
+
 export interface PathDetail {
   _id: string;
   pathName: string;
   selectedCareer?: string;
   selectionType?: string;
   careerPath?: string;
-  careerPathBreakdown?: any;
-  skillBreakdown?: any;
+  careerPathBreakdown?: CareerPathBreakdown;
+  skillBreakdown?: CareerPathBreakdown;
   totalCourses: number;
   completedCourses: number;
   overallProgress: number;
@@ -118,7 +169,10 @@ export interface PathDetail {
     beginner: Array<{ courseId: string; title: string; difficulty: string; cost: string; provider: string; skillsLearned: string[] }>;
     intermediate: Array<{ courseId: string; title: string; difficulty: string; cost: string; provider: string; skillsLearned: string[] }>;
     advanced: Array<{ courseId: string; title: string; difficulty: string; cost: string; provider: string; skillsLearned: string[] }>;
+    lxNotes?: PathLxNote[];
   };
+  cv?: PathCv | null;
+  sessionId?: string;
   validationResult?: ValidationResult;
   generatedAt: string;
   createdAt: string;
